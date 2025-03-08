@@ -1,5 +1,5 @@
-// src/components/Game.js - Critical Error Fixes
-import React, { useState, useEffect } from 'react';
+// src/components/Game.js - Complete Fixed Version
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 
@@ -22,26 +22,56 @@ const Game = () => {
   const [countdown, setCountdown] = useState(3);
   const [error, setError] = useState('');
   const [connected, setConnected] = useState(false);
-  const [attemptedJoin, setAttemptedJoin] = useState(false);
+  const [joinAttempted, setJoinAttempted] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+
+  // Normalized gameId for consistency
+  const normalizedGameId = gameId?.trim().toUpperCase();
+
+  // Join game function - separated for reuse
+  const joinGame = useCallback((socket) => {
+    const playerName = localStorage.getItem('playerName');
+    // Check if this player created the game
+    const isCreator = localStorage.getItem('gameCreator') === normalizedGameId;
+    
+    console.log(`Attempting to join game ${normalizedGameId} as ${playerName}, creator: ${isCreator}`);
+    
+    if (!playerName) {
+      setError('Player name is required');
+      return;
+    }
+
+    // Join the game room with creator status
+    socket.emit('joinGame', { 
+      gameId: normalizedGameId, 
+      playerName,
+      isCreator 
+    });
+    
+    setJoinAttempted(true);
+  }, [normalizedGameId]);
 
   // Connect to socket on component mount
   useEffect(() => {
-    const playerName = localStorage.getItem('playerName');
-    // Check if this player created the game
-    const isCreator = localStorage.getItem('gameCreator') === gameId;
-    
-    if (!playerName) {
-      localStorage.setItem('pendingGameId', gameId);
+    if (!normalizedGameId) {
       navigate('/');
       return;
     }
 
-    console.log('Connecting to socket, creator status:', isCreator, 'for game:', gameId);
+    const playerName = localStorage.getItem('playerName');
+    if (!playerName) {
+      localStorage.setItem('pendingGameId', normalizedGameId);
+      navigate('/');
+      return;
+    }
+
+    console.log(`Game component initialized for game: ${normalizedGameId}`);
     
     // Get the backend URL from environment variable or use local fallback
     const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    console.log('Connecting to socket at:', SOCKET_URL);
     
-    // First test connectivity with a fetch
+    // Test server connectivity
     fetch(`${SOCKET_URL}/ping`)
       .then(response => response.text())
       .then(data => console.log('Server ping response:', data))
@@ -49,26 +79,50 @@ const Game = () => {
     
     const newSocket = io(SOCKET_URL, {
       forceNew: true,
-      reconnectionAttempts: 5,
-      timeout: 10000
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      timeout: 10000,
+      transports: ['websocket', 'polling']
     });
     
     newSocket.on('connect', () => {
-      console.log('Socket connected successfully');
+      console.log('Socket connected successfully with ID:', newSocket.id);
       setConnected(true);
-      setAttemptedJoin(true);
+      setError('');
       
-      // Join the game room with creator status
-      newSocket.emit('joinGame', { 
-        gameId, 
-        playerName,
-        isCreator 
-      });
+      // Join the game
+      joinGame(newSocket);
     });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
       setError('Connection error: Unable to connect to game server');
+    });
+
+    newSocket.on('reconnect', (attemptNumber) => {
+      console.log(`Socket reconnected after ${attemptNumber} attempts`);
+      setConnected(true);
+      setReconnecting(false);
+      setError('');
+      
+      // Rejoin the game after reconnection
+      joinGame(newSocket);
+    });
+
+    newSocket.on('reconnect_attempt', (attemptNumber) => {
+      console.log(`Socket reconnection attempt ${attemptNumber}`);
+      setReconnecting(true);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      setConnected(false);
+      if (reason === 'io server disconnect') {
+        // The server has forcefully disconnected the socket
+        console.log('Reconnecting...');
+        newSocket.connect();
+      }
     });
 
     // Listen for game updates
@@ -99,10 +153,18 @@ const Game = () => {
       console.error('Received error:', errorMsg);
       setError(errorMsg.message);
       
-      // If we get "game not found" error, check if we're supposed to be the creator
-      if (errorMsg.message === 'Game not found' && isCreator) {
-        console.log('Game not found but we should be creator, creating it now...');
-        newSocket.emit('createGame', { playerName });
+      // Special handling for "Game not found" error
+      if (errorMsg.message === 'Game not found') {
+        // If we're supposed to be the creator, try creating the game
+        const isCreator = localStorage.getItem('gameCreator') === normalizedGameId;
+        
+        if (isCreator) {
+          console.log('Game not found but we should be creator, creating it now...');
+          const playerName = localStorage.getItem('playerName');
+          if (playerName) {
+            newSocket.emit('createGame', { playerName, requestedId: normalizedGameId });
+          }
+        }
       }
     });
 
@@ -113,26 +175,22 @@ const Game = () => {
       console.log('Disconnecting socket');
       if (newSocket) newSocket.disconnect();
     };
-  }, [gameId, navigate]);
+  }, [normalizedGameId, navigate, joinGame]);
 
-  // Special effect to handle case where game isn't found but we should create it
-  useEffect(() => {
-    if (connected && attemptedJoin && error === 'Game not found' && socket) {
-      const playerName = localStorage.getItem('playerName');
-      const isCreator = localStorage.getItem('gameCreator') === gameId;
-      
-      if (isCreator && playerName) {
-        console.log('Attempting to create the game as we should be the creator');
-        socket.emit('createGame', { playerName });
-        setError('');
-      }
+  // Function to attempt joining the game again
+  const retryJoin = () => {
+    if (socket && socket.connected) {
+      console.log('Retrying game join...');
+      joinGame(socket);
+    } else {
+      setError('Socket not connected. Please refresh the page.');
     }
-  }, [connected, attemptedJoin, error, socket, gameId]);
+  };
 
   const startGame = () => {
     if (socket && isHost) {
       console.log('Requesting to start game');
-      socket.emit('startGame', { gameId });
+      socket.emit('startGame', { gameId: normalizedGameId });
     } else {
       console.log('Not allowed to start game, host status:', isHost);
     }
@@ -141,7 +199,7 @@ const Game = () => {
   const playChappalCard = (cardIndex) => {
     if (socket && gameState.started && !gameState.waitingForNextCard && !gameState.gameOver) {
       socket.emit('playChappal', { 
-        gameId, 
+        gameId: normalizedGameId, 
         playerName: currentPlayer.name, 
         cardIndex 
       });
@@ -156,7 +214,7 @@ const Game = () => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            socket.emit('nextCockroach', { gameId });
+            socket.emit('nextCockroach', { gameId: normalizedGameId });
             return 3;
           }
           return prev - 1;
@@ -164,7 +222,7 @@ const Game = () => {
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, gameId]);
+  }, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, normalizedGameId]);
 
   // Display connection status if not connected
   if (!connected) {
@@ -174,7 +232,7 @@ const Game = () => {
           <h1>Chappal vs Cockroach</h1>
         </header>
         <div className="connecting-message">
-          <h2>Connecting to game...</h2>
+          <h2>{reconnecting ? 'Reconnecting...' : 'Connecting to game...'}</h2>
           <p>Please wait while we connect to the game server.</p>
           {error && <div className="error-message">{error}</div>}
           <button onClick={() => navigate('/')} className="back-button">
@@ -185,14 +243,37 @@ const Game = () => {
     );
   }
 
+  // Display error with retry option
+  if (error === 'Game not found' && joinAttempted) {
+    return (
+      <div className="game-container">
+        <header className="game-header">
+          <h1>Chappal vs Cockroach</h1>
+        </header>
+        <div className="error-container">
+          <h2>Game Not Found</h2>
+          <p>The game with ID <strong>{normalizedGameId}</strong> could not be found.</p>
+          <div className="error-actions">
+            <button onClick={retryJoin} className="retry-button">
+              Retry Join
+            </button>
+            <button onClick={() => navigate('/')} className="back-button">
+              Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="game-container">
       <header className="game-header">
         <h1>Chappal vs Cockroach</h1>
         <div className="game-info">
-          <p>Game ID: <span className="game-id">{gameId}</span></p>
+          <p>Game ID: <span className="game-id">{normalizedGameId}</span></p>
           <button onClick={() => {
-            const fullUrl = `${window.location.origin}/game/${gameId}`;
+            const fullUrl = `${window.location.origin}/game/${normalizedGameId}`;
             navigator.clipboard.writeText(fullUrl);
             alert('Game link copied to clipboard!');
           }}>
@@ -206,16 +287,26 @@ const Game = () => {
       {!gameState.started && (
         <div className="waiting-room">
           <h2>Waiting Room</h2>
+          <div className="game-status">
+            <p>Socket connected: {socket?.connected ? 'Yes' : 'No'}</p>
+            <p>Players: {players.length}</p>
+            <p>You are {isHost ? 'the host' : 'a player'}</p>
+          </div>
+          
           <div className="player-list">
             <h3>Players:</h3>
-            <ul>
-              {players.map((player) => (
-                <li key={player.id} className={player.isHost ? 'host-player' : ''}>
-                  {player.name} {player.id === currentPlayer?.id ? '(You)' : ''}
-                  {player.isHost ? ' (Host)' : ''}
-                </li>
-              ))}
-            </ul>
+            {players.length === 0 ? (
+              <p className="no-players">No players have joined yet.</p>
+            ) : (
+              <ul>
+                {players.map((player) => (
+                  <li key={player.id} className={player.isHost ? 'host-player' : ''}>
+                    {player.name} {player.id === currentPlayer?.id ? '(You)' : ''}
+                    {player.isHost ? ' (Host)' : ''}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           
           {isHost && players.length >= 2 && (
@@ -233,7 +324,7 @@ const Game = () => {
               <p>Waiting for at least one more player to join...</p>
               <p>Share this link with other players:</p>
               <div className="share-link">
-                {window.location.origin}/game/{gameId}
+                {window.location.origin}/game/{normalizedGameId}
               </div>
             </div>
           )}
@@ -330,6 +421,41 @@ const Game = () => {
           <button onClick={() => navigate('/')} className="back-to-home">Back to Home</button>
         </div>
       )}
+
+      <style>{`
+        .game-status {
+          background-color: #f5f5f5;
+          padding: 10px;
+          border-radius: 8px;
+          margin-bottom: 15px;
+          font-size: 14px;
+        }
+        .no-players {
+          font-style: italic;
+          color: #666;
+        }
+        .error-container {
+          text-align: center;
+          padding: 30px;
+          background-color: #ffebee;
+          border-radius: 8px;
+          margin: 20px 0;
+        }
+        .error-actions {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-top: 20px;
+        }
+        .retry-button {
+          background-color: #2196F3;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 };

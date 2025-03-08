@@ -115,7 +115,7 @@ io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   // Create a new game
-  socket.on('createGame', ({ playerName }) => {
+  socket.on('createGame', ({ playerName, requestedId }) => {
     const trimmedName = playerName.trim();
     
     if (!trimmedName) {
@@ -123,8 +123,13 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Generate a simpler game ID that's easier to type and remember
-    const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    // Use requested ID if provided, otherwise generate one
+    let gameId = requestedId;
+    if (!gameId) {
+      // Generate a simpler game ID that's easier to type and remember
+      gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    }
+    
     console.log(`Creating new game with ID: "${gameId}"`);
     
     // Check if this game ID already exists
