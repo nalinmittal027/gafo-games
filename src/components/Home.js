@@ -1,4 +1,4 @@
-// src/components/Home.js - Critical Error Fixes
+// src/components/Home.js - Robust Fix
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -8,6 +8,7 @@ const Home = () => {
   const [gameId, setGameId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [socketStatus, setSocketStatus] = useState('disconnected');
   const navigate = useNavigate();
   const location = useLocation();
   const [socket, setSocket] = useState(null);
@@ -44,25 +45,40 @@ const Home = () => {
       const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
       console.log('Connecting to socket at:', SOCKET_URL);
       
+      setSocketStatus('connecting');
+      
       // Test the connection first with a fetch
       fetch(`${SOCKET_URL}/ping`)
         .then(response => response.text())
-        .catch(err => console.error('Server ping failed:', err));
+        .then(data => console.log('Server ping response:', data))
+        .catch(err => {
+          console.error('Server ping failed:', err);
+          setSocketStatus('ping-failed');
+        });
       
       const newSocket = io(SOCKET_URL, { 
         forceNew: true,
+        reconnection: true,
         reconnectionAttempts: 5,
-        timeout: 10000
+        timeout: 10000,
+        transports: ['websocket', 'polling']
       });
       
       newSocket.on('connect', () => {
-        console.log('Socket connected successfully');
+        console.log('Socket connected successfully with ID:', newSocket.id);
+        setSocketStatus('connected');
       });
 
       newSocket.on('connect_error', (err) => {
         console.error('Socket connection error:', err);
         setError('Unable to connect to game server. Please try again.');
+        setSocketStatus('error');
         setLoading(false);
+      });
+
+      newSocket.on('disconnect', (reason) => {
+        console.log('Socket disconnected:', reason);
+        setSocketStatus('disconnected');
       });
 
       // Listen for responses
@@ -104,6 +120,23 @@ const Home = () => {
     };
   }, [navigate, location.pathname]);
 
+  // Function to test the connection
+  const testConnection = () => {
+    const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    console.log('Testing server connection to:', SOCKET_URL);
+    
+    fetch(`${SOCKET_URL}/ping`)
+      .then(response => response.text())
+      .then(data => {
+        console.log('Server ping response:', data);
+        alert(`Server responded: ${data}`);
+      })
+      .catch(err => {
+        console.error('Server ping failed:', err);
+        alert(`Failed to connect to server: ${err.message}`);
+      });
+  };
+
   const handleCreateGame = () => {
     if (!playerName.trim()) {
       setError('Please enter your name');
@@ -114,12 +147,13 @@ const Home = () => {
     setError('');
     localStorage.setItem('playerName', playerName);
     
-    if (socket) {
+    if (socket && socket.connected) {
       console.log('Requesting to create game for:', playerName);
       // Clear any previous creator status
       localStorage.removeItem('gameCreator');
       socket.emit('createGame', { playerName });
     } else {
+      console.error('Socket not connected, socket state:', socket?.connected);
       setError('Connection error. Please refresh the page.');
       setLoading(false);
     }
@@ -139,13 +173,14 @@ const Home = () => {
     setError('');
     localStorage.setItem('playerName', playerName);
     
-    if (socket) {
+    if (socket && socket.connected) {
       const trimmedId = gameId.trim().toUpperCase();
       console.log('Checking if game exists:', trimmedId);
       // Clear any previous creator status
       localStorage.removeItem('gameCreator');
       socket.emit('checkGame', { gameId: trimmedId });
     } else {
+      console.error('Socket not connected, socket state:', socket?.connected);
       setError('Connection error. Please refresh the page.');
       setLoading(false);
     }
@@ -154,6 +189,14 @@ const Home = () => {
   return (
     <div className="home-container">
       <h1>Chappal vs Cockroach</h1>
+      
+      <div className="socket-status">
+        Connection: <span className={`status-${socketStatus}`}>{socketStatus}</span>
+        <button onClick={testConnection} className="test-connection-btn">
+          Test Connection
+        </button>
+      </div>
+      
       <div className="form-group">
         <label htmlFor="playerName">Your Name:</label>
         <input
@@ -170,7 +213,7 @@ const Home = () => {
         <button 
           className="create-game-btn" 
           onClick={handleCreateGame}
-          disabled={loading}
+          disabled={loading || socketStatus !== 'connected'}
         >
           {loading ? 'Creating...' : 'Create a Game'}
         </button>
@@ -192,13 +235,36 @@ const Home = () => {
         <button 
           className="join-game-btn" 
           onClick={handleJoinGame}
-          disabled={loading}
+          disabled={loading || socketStatus !== 'connected'}
         >
           {loading ? 'Joining...' : 'Join Game'}
         </button>
       </div>
 
       {error && <div className="error-message">{error}</div>}
+      
+      <style>{`
+        .socket-status {
+          margin: 10px 0 20px;
+          font-size: 14px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+        }
+        .status-connected { color: green; font-weight: bold; }
+        .status-connecting { color: orange; }
+        .status-disconnected, .status-error, .status-ping-failed { color: red; }
+        .test-connection-btn {
+          background-color: #607d8b;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 5px 10px;
+          font-size: 12px;
+          cursor: pointer;
+        }
+      `}</style>
     </div>
   );
 };

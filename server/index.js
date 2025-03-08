@@ -123,11 +123,13 @@ io.on('connection', (socket) => {
       return;
     }
     
-    // Generate a short, easy-to-type game ID with only capital letters
-    const gameId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Generate a simpler game ID that's easier to type and remember
+    const gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
+    console.log(`Creating new game with ID: "${gameId}"`);
     
-    // Check if this game ID already exists (extremely unlikely but possible)
+    // Check if this game ID already exists
     if (games[gameId]) {
+      console.log(`Game ID collision detected: ${gameId}`);
       socket.emit('error', { message: 'Please try again' });
       return;
     }
@@ -151,7 +153,7 @@ io.on('connection', (socket) => {
       waitingForNextCard: false,
       gameOver: false
     };
-
+  
     // Initialize player score
     games[gameId].scores[trimmedName] = 0;
     
@@ -164,7 +166,9 @@ io.on('connection', (socket) => {
 
   // Check if game exists
   socket.on('checkGame', ({ gameId }) => {
-    console.log(`Checking game: ${gameId}`);
+    console.log(`Checking game - Received ID: "${gameId}"`);
+    console.log(`Game ID type: ${typeof gameId}`);
+    console.log(`Game ID length: ${gameId?.length}`);
     
     if (!gameId) {
       console.log('No game ID provided');
@@ -548,6 +552,24 @@ io.on('connection', (socket) => {
         console.log(`${playerName} left game ${gameId}`);
       }
     }
+  });
+});
+
+app.get('/games/debug', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  const gamesList = Object.keys(games).map(id => ({
+    id: id,
+    idLength: id.length,
+    normalized: id.toUpperCase(),
+    players: games[id].players.length,
+    started: games[id].started,
+    createdAt: new Date(games[id].created).toISOString()
+  }));
+  
+  res.json({
+    totalGames: gamesList.length,
+    games: gamesList,
+    gamesObject: games
   });
 });
 
