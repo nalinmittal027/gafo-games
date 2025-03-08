@@ -71,7 +71,7 @@ const io = new Server(server, {
   }
 });
 
-// Generate Cockroach deck
+// Generate Cockroach deck with improved distribution (1-9) and dummy cards
 const generateCockroachDeck = (playerCount) => {
   const deck = [];
   const cardCount = {
@@ -84,13 +84,35 @@ const generateCockroachDeck = (playerCount) => {
     8: 50
   }[playerCount] || 18;
 
-  // Create 5 cards of each number from 1 to 9
+  // Calculate number of regular cards and dummy cards
+  const regularCardCount = Math.floor(cardCount * 0.75); // 75% regular cards
+  const dummyCardCount = cardCount - regularCardCount;   // 25% dummy cards
+  
+  console.log(`Generating deck with ${regularCardCount} regular cards and ${dummyCardCount} dummy cards`);
+
+  // Create regular cockroach cards (numbers 1-9 with equal distribution)
+  const cardsPerNumber = Math.ceil(regularCardCount / 9);
   for (let i = 1; i <= 9; i++) {
-    for (let j = 0; j < 5; j++) {
-      deck.push({ value: i, id: uuidv4() });
-      if (deck.length >= cardCount) break;
+    for (let j = 0; j < cardsPerNumber; j++) {
+      if (deck.length < regularCardCount) {
+        deck.push({ 
+          type: 'cockroach',
+          value: i, 
+          id: uuidv4() 
+        });
+      }
     }
-    if (deck.length >= cardCount) break;
+  }
+
+  // Add dummy cards
+  const dummyTypes = ['safetyPin', 'almond', 'button', 'dogShit', 'ant'];
+  for (let i = 0; i < dummyCardCount; i++) {
+    const subtype = dummyTypes[i % dummyTypes.length];
+    deck.push({
+      type: 'dummy',
+      subtype: subtype,
+      id: uuidv4()
+    });
   }
 
   // Shuffle the deck
@@ -99,14 +121,19 @@ const generateCockroachDeck = (playerCount) => {
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
 
+  console.log(`Generated deck of ${deck.length} cards`);
   return deck.slice(0, cardCount);
 };
 
-// Generate Chappal cards
+// Generate Chappal cards with values 2-8
 const generateChappalCards = () => {
   const cards = [];
   for (let i = 2; i <= 8; i++) {
-    cards.push({ value: i, id: uuidv4() });
+    cards.push({ 
+      type: 'chappal',
+      value: i, 
+      id: uuidv4() 
+    });
   }
   return cards;
 };
@@ -413,7 +440,7 @@ io.on('connection', (socket) => {
     if (!game || !game.started || !game.waitingForNextCard) {
       return;
     }
-
+  
     // Check if there are cockroach cards left
     if (game.cockroachDeck.length === 0) {
       game.gameOver = true;
@@ -421,24 +448,31 @@ io.on('connection', (socket) => {
         started: game.started,
         cockroachDeck: game.cockroachDeck.length,
         currentCockroach: game.currentCockroach,
-        discardPile: game.discardPile.length,
+        discardPile: game.discardPile.length || 0,
         scores: game.scores,
         waitingForNextCard: false,
         gameOver: game.gameOver
       });
       return;
     }
-
+  
     // Draw the next cockroach card
     game.currentCockroach = game.cockroachDeck.pop();
     game.waitingForNextCard = false;
-
+  
+    // Log what type of card was drawn
+    if (game.currentCockroach.type === 'dummy') {
+      console.log(`Game ${trimmedId}: Drew a dummy card: ${game.currentCockroach.subtype}`);
+    } else {
+      console.log(`Game ${trimmedId}: Drew a cockroach card with value ${game.currentCockroach.value}`);
+    }
+  
     // Send updated game state to all players
     io.to(trimmedId).emit('gameState', {
       started: game.started,
       cockroachDeck: game.cockroachDeck.length,
       currentCockroach: game.currentCockroach,
-      discardPile: game.discardPile.length,
+      discardPile: game.discardPile.length || 0,
       scores: game.scores,
       waitingForNextCard: false,
       gameOver: game.gameOver
@@ -456,29 +490,33 @@ io.on('connection', (socket) => {
     if (!game || !game.started || game.waitingForNextCard || game.gameOver) {
       return;
     }
-
+  
     const player = game.players.find(p => p.name === playerName);
     if (!player || player.id !== socket.id) {
       return;
     }
-
+  
     if (cardIndex < 0 || cardIndex >= player.chappalCards.length) {
       return;
     }
-
+  
     const chappalCard = player.chappalCards[cardIndex];
     const cockroachCard = game.currentCockroach;
-
+  
     // Remove the played chappal card
     player.chappalCards.splice(cardIndex, 1);
-
-    // Process the play
-    if (chappalCard.value >= cockroachCard.value) {
-      // Player scores points
+  
+    // Process the play - special handling for dummy cards
+    if (cockroachCard.type === 'dummy') {
+      // Player automatically wins against dummy cards
+      game.scores[playerName] += 1; // Award 1 point for dummy cards
+      console.log(`${playerName} found ${cockroachCard.subtype} and scored 1 point!`);
+    } else if (chappalCard.value >= cockroachCard.value) {
+      // Player scores points for regular cockroach
       game.scores[playerName] += cockroachCard.value;
       console.log(`${playerName} scored ${cockroachCard.value} points!`);
     }
-
+  
     // Ensure discardPile is initialized
     if (!Array.isArray(game.discardPile)) {
       game.discardPile = [];
@@ -487,7 +525,7 @@ io.on('connection', (socket) => {
     // Add both cards to discard pile
     game.discardPile.push(chappalCard, cockroachCard);
     game.currentCockroach = null;
-
+  
     // Check if the game is over
     const allChappalCardsPlayed = game.players.every(p => p.chappalCards.length === 0);
     
@@ -497,7 +535,7 @@ io.on('connection', (socket) => {
       // Prepare for next card
       game.waitingForNextCard = true;
     }
-
+  
     // Send updated game state to all players
     io.to(trimmedId).emit('gameState', {
       started: game.started,
@@ -508,10 +546,10 @@ io.on('connection', (socket) => {
       waitingForNextCard: game.waitingForNextCard,
       gameOver: game.gameOver
     });
-
+  
     // Update player's hand
     io.to(player.id).emit('currentPlayer', player);
-
+  
     // Update player list for everyone
     io.to(trimmedId).emit('playerList', game.players);
   });

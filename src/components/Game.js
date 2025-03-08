@@ -1,7 +1,77 @@
-// src/components/Game.js - Complete Fixed Version
+// src/components/Game.js - Enhanced version with card graphics
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
+
+// Card graphics - simple ASCII art for now
+const CARD_GRAPHICS = {
+  // Chappal card graphics
+  chappal: `
+   _________
+  /         \\
+ |  CHAPPAL  |
+ |           |
+ |    👡     |
+ |           |
+ |___________|
+  `,
+  // Cockroach card graphics
+  cockroach: `
+   _________
+  /         \\
+ | COCKROACH |
+ |           |
+ |    🪳     |
+ |           |
+ |___________|
+  `,
+  // Dummy cards graphics
+  safetyPin: `
+   _________
+  /         \\
+ |SAFETY PIN |
+ |           |
+ |    📌     |
+ |           |
+ |___________|
+  `,
+  almond: `
+   _________
+  /         \\
+ |  ALMOND   |
+ |           |
+ |    🥜     |
+ |           |
+ |___________|
+  `,
+  button: `
+   _________
+  /         \\
+ |  BUTTON   |
+ |           |
+ |    🔘     |
+ |           |
+ |___________|
+  `,
+  dogShit: `
+   _________
+  /         \\
+ | DOG SHIT  |
+ |           |
+ |    💩     |
+ |           |
+ |___________|
+  `,
+  ant: `
+   _________
+  /         \\
+ |    ANT    |
+ |           |
+ |    🐜     |
+ |           |
+ |___________|
+  `,
+};
 
 const Game = () => {
   const { gameId } = useParams();
@@ -224,6 +294,45 @@ const Game = () => {
     return () => clearInterval(timer);
   }, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, normalizedGameId]);
 
+  // Function to get appropriate card graphic
+  const getCardGraphic = (card) => {
+    if (!card) return null;
+    
+    if (card.type === 'chappal') {
+      return (
+        <div className="card-graphic">
+          <div className="card-image chappal-image">👡</div>
+          <div className="card-value">{card.value}</div>
+        </div>
+      );
+    } else if (card.type === 'cockroach') {
+      return (
+        <div className="card-graphic">
+          <div className="card-image cockroach-image">🪳</div>
+          <div className="card-value">{card.value}</div>
+        </div>
+      );
+    } else if (card.type === 'dummy') {
+      const dummyGraphics = {
+        'safetyPin': '📌',
+        'almond': '🥜',
+        'button': '🔘',
+        'dogShit': '💩',
+        'ant': '🐜'
+      };
+      
+      return (
+        <div className="card-graphic">
+          <div className="card-image dummy-image">{dummyGraphics[card.subtype] || '❓'}</div>
+          <div className="card-name">{card.subtype}</div>
+        </div>
+      );
+    }
+    
+    // Default fallback
+    return <div className="card-value">{card.value}</div>;
+  };
+
   // Display connection status if not connected
   if (!connected) {
     return (
@@ -355,7 +464,23 @@ const Game = () => {
               <div className="current-cockroach">
                 <h3>Current Cockroach</h3>
                 <div className="card cockroach-card">
-                  {gameState.currentCockroach.value}
+                  {gameState.currentCockroach.type === 'dummy' ? (
+                    <div className="dummy-card-content">
+                      <div className="card-image">
+                        {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
+                        {gameState.currentCockroach.subtype === 'almond' && '🥜'}
+                        {gameState.currentCockroach.subtype === 'button' && '🔘'}
+                        {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
+                        {gameState.currentCockroach.subtype === 'ant' && '🐜'}
+                      </div>
+                      <div className="card-name">{gameState.currentCockroach.subtype}</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="cockroach-image">🪳</div>
+                      <div className="card-value">{gameState.currentCockroach.value}</div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -394,7 +519,8 @@ const Game = () => {
                   className={`card chappal-card ${gameState.waitingForNextCard ? 'disabled' : ''}`}
                   onClick={() => playChappalCard(index)}
                 >
-                  {card.value}
+                  <div className="chappal-image">👡</div>
+                  <div className="card-value">{card.value}</div>
                 </div>
               ))}
             </div>
@@ -454,6 +580,38 @@ const Game = () => {
           padding: 10px 20px;
           border-radius: 5px;
           cursor: pointer;
+        }
+        
+        /* Card graphics styling */
+        .card-image {
+          font-size: 40px;
+          margin-bottom: 10px;
+        }
+        
+        .card-value {
+          font-size: 24px;
+          font-weight: bold;
+        }
+        
+        .card-name {
+          font-size: 16px;
+          margin-top: 5px;
+        }
+        
+        .cockroach-card {
+          background: linear-gradient(145deg, #8B4513, #A0522D);
+        }
+        
+        .chappal-card {
+          background: linear-gradient(145deg, #4682B4, #5F9EA0);
+        }
+        
+        .dummy-card-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
         }
       `}</style>
     </div>
