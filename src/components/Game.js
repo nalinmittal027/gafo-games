@@ -311,23 +311,13 @@ const Game = () => {
 // Countdown timer for next cockroach card
 useEffect(() => {
   let timer;
+  // Only run timer when in waiting state
   if (gameState.started && gameState.waitingForNextCard && !gameState.gameOver) {
+    console.log("Starting countdown timer");
     timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          socket.emit('nextCockroach', { gameId: normalizedGameId });
-          return 3;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  } else if (gameState.started && gameState.currentCockroach?.type === 'dummy' && !gameState.gameOver) {
-    // Special case: When a dummy card is shown, also run a timer
-    // This ensures a new card is drawn even if no one plays on the dummy card
-    timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
+          console.log("Timer reached zero, drawing next card");
           clearInterval(timer);
           socket.emit('nextCockroach', { gameId: normalizedGameId });
           return 3;
@@ -337,9 +327,13 @@ useEffect(() => {
     }, 1000);
   }
   
-  return () => clearInterval(timer);
-}, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, 
-    gameState.currentCockroach?.type, socket, normalizedGameId]);
+  return () => {
+    if (timer) {
+      clearInterval(timer);
+    }
+  };
+}, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, normalizedGameId]);
+
 
   // Function to get appropriate card graphic
   const getCardGraphic = (card) => {
@@ -502,42 +496,42 @@ useEffect(() => {
     </div>
 
     <div className="center-area">
-      <div className="cockroach-deck">
-        <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
-        <div className="card card-back"></div>
-      </div>
+  <div className="cockroach-deck">
+    <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
+    <div className="card card-back"></div>
+  </div>
 
-      {gameState.currentCockroach && (
-        <div className="current-cockroach">
-          <h3>Current Cockroach</h3>
-          <div className="card cockroach-card">
-            {gameState.currentCockroach.type === 'dummy' ? (
-              <div className="dummy-card-content">
-                <div className="card-image">
-                  {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
-                  {gameState.currentCockroach.subtype === 'almond' && '🥜'}
-                  {gameState.currentCockroach.subtype === 'button' && '🔘'}
-                  {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
-                  {gameState.currentCockroach.subtype === 'ant' && '🐜'}
-                </div>
-                <div className="card-name">{gameState.currentCockroach.subtype}</div>
-              </div>
-            ) : (
-              <>
-                <div className="cockroach-image">🪳</div>
-                <div className="card-value">{gameState.currentCockroach.value}</div>
-              </>
-            )}
+  {gameState.currentCockroach && (
+    <div className="current-cockroach">
+      <h3>Current Cockroach</h3>
+      <div className="card cockroach-card">
+        {gameState.currentCockroach.type === 'dummy' ? (
+          <div className="dummy-card-content">
+            <div className="card-image">
+              {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
+              {gameState.currentCockroach.subtype === 'almond' && '🥜'}
+              {gameState.currentCockroach.subtype === 'button' && '🔘'}
+              {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
+              {gameState.currentCockroach.subtype === 'ant' && '🐜'}
+            </div>
+            <div className="card-name">{gameState.currentCockroach.subtype}</div>
           </div>
-        </div>
-      )}
-
-      {gameState.waitingForNextCard && (
-        <div className="countdown">
-          Next card in: {countdown}s
-        </div>
-      )}
+        ) : (
+          <>
+            <div className="cockroach-image">🪳</div>
+            <div className="card-value">{gameState.currentCockroach.value}</div>
+          </>
+        )}
+      </div>
     </div>
+  )}
+
+  {gameState.waitingForNextCard && (
+    <div className="countdown">
+      Next card in: {countdown}s
+    </div>
+  )}
+</div>
 
     {/* Move player's hand right after center area */}
     <div className="player-hand">
