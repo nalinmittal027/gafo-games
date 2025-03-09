@@ -127,15 +127,19 @@ const Game = () => {
       navigate('/');
       return;
     }
-
+  
     const playerName = localStorage.getItem('playerName');
     if (!playerName) {
       localStorage.setItem('pendingGameId', normalizedGameId);
       navigate('/');
       return;
     }
-
+  
     console.log(`Game component initialized for game: ${normalizedGameId}`);
+    
+    // Verify if this user is the creator of this game
+    const isCreator = localStorage.getItem('gameCreator') === normalizedGameId;
+    console.log('User is creator of this game:', isCreator);
     
     // Get the backend URL from environment variable or use local fallback
     const SOCKET_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
@@ -161,9 +165,18 @@ const Game = () => {
       setConnected(true);
       setError('');
       
-      // Join the game
+    // If the user is the creator, wait a bit before trying to join
+    // This ensures the server has time to properly set up the game
+    if (isCreator) {
+      console.log('Creator is joining with short delay to ensure game is ready');
+      setTimeout(() => {
+        joinGame(newSocket);
+      }, 500);
+    } else {
+      // Regular player joins immediately
       joinGame(newSocket);
-    });
+    }
+  });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
@@ -225,14 +238,28 @@ const Game = () => {
       
       // Special handling for "Game not found" error
       if (errorMsg.message === 'Game not found') {
-        // If we're supposed to be the creator, try creating the game
         const isCreator = localStorage.getItem('gameCreator') === normalizedGameId;
         
         if (isCreator) {
           console.log('Game not found but we should be creator, creating it now...');
           const playerName = localStorage.getItem('playerName');
           if (playerName) {
-            newSocket.emit('createGame', { playerName, requestedId: normalizedGameId });
+            console.log('Requesting creation of game with ID:', normalizedGameId);
+            newSocket.emit('createGame', { 
+              playerName, 
+              requestedId: normalizedGameId,
+              forceCreate: true  // Special flag to force creation
+            });
+            
+            // Add a listener for game creation confirmation
+            newSocket.once('gameCreated', ({ gameId: createdId }) => {
+              console.log('Game was created with ID:', createdId);
+              if (createdId === normalizedGameId) {
+                console.log('Successfully created and joined game');
+                setError(''); // Clear the error
+                joinGame(newSocket); // Try joining again
+              }
+            });
           }
         }
       }

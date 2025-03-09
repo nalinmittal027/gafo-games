@@ -1,4 +1,4 @@
-// src/components/Home.js - Robust Fix
+// src/components/Home.js - Fixed Game Creation Flow
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -25,7 +25,6 @@ const Home = () => {
         const savedName = localStorage.getItem('playerName');
         if (savedName) {
           // We have both name and game ID, redirect immediately
-          localStorage.removeItem('gameCreator');
           navigate(`/game/${urlGameId}`);
           return;
         } else {
@@ -84,10 +83,15 @@ const Home = () => {
       // Listen for responses
       newSocket.on('gameCreated', ({ gameId }) => {
         console.log('Game created with ID:', gameId);
-        setLoading(false);
-        // Mark this player as the creator for this game
+        
+        // IMPORTANT: Set creator status BEFORE navigating
         localStorage.setItem('gameCreator', gameId);
-        navigate(`/game/${gameId}`);
+        
+        // Give the server a moment to set up the game before joining
+        setTimeout(() => {
+          setLoading(false);
+          navigate(`/game/${gameId}`);
+        }, 500);
       });
 
       newSocket.on('gameExists', ({ exists, gameId: foundGameId }) => {

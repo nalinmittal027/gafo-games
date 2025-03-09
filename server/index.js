@@ -142,7 +142,7 @@ io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   // Create a new game
-  socket.on('createGame', ({ playerName, requestedId }) => {
+  socket.on('createGame', ({ playerName, requestedId, forceCreate }) => {
     const trimmedName = playerName.trim();
     
     if (!trimmedName) {
@@ -151,7 +151,7 @@ io.on('connection', (socket) => {
     }
     
     // Use requested ID if provided, otherwise generate one
-    let gameId = requestedId;
+    let gameId = requestedId ? requestedId.trim().toUpperCase() : null;
     if (!gameId) {
       // Generate a simpler game ID that's easier to type and remember
       gameId = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -160,7 +160,7 @@ io.on('connection', (socket) => {
     console.log(`Creating new game with ID: "${gameId}"`);
     
     // Check if this game ID already exists
-    if (games[gameId]) {
+    if (games[gameId] && !forceCreate) {
       console.log(`Game ID collision detected: ${gameId}`);
       socket.emit('error', { message: 'Please try again' });
       return;
@@ -194,6 +194,29 @@ io.on('connection', (socket) => {
     
     console.log(`Game created: ${gameId} by ${trimmedName}`);
     socket.emit('gameCreated', { gameId });
+    
+    // Send the player their initial data to confirm successful join
+    socket.emit('currentPlayer', {
+      id: socket.id,
+      name: trimmedName,
+      chappalCards: [],
+      isHost: true
+    });
+    
+    // Also send the host status
+    socket.emit('hostStatus', { isHost: true });
+    
+    // Also send initial player list and game state
+    socket.emit('playerList', games[gameId].players);
+    socket.emit('gameState', {
+      started: false,
+      cockroachDeck: 0,
+      currentCockroach: null,
+      discardPile: 0,
+      scores: games[gameId].scores,
+      waitingForNextCard: false,
+      gameOver: false
+    });
   });
 
   // Check if game exists
@@ -238,25 +261,36 @@ io.on('connection', (socket) => {
   socket.on('joinGame', ({ gameId, playerName, isCreator }) => {
     console.log(`Join attempt: ${playerName} to ${gameId}, creator: ${isCreator}`);
     
-    if (!gameId || !playerName) {
-      socket.emit('error', { message: 'Invalid game ID or player name' });
-      return;
-    }
-    
     // Normalize game ID and name for consistency
     const trimmedId = gameId.trim().toUpperCase();
     const trimmedName = playerName.trim();
     
-    console.log(`Normalized game ID: ${trimmedId}`);
+    console.log(`Normalized game ID: "${trimmedId}"`);
+    console.log(`Checking for game in:`, Object.keys(games));
+    
+    if (!trimmedId || !trimmedName) {
+      console.log('Invalid inputs:', { gameId, playerName });
+      socket.emit('error', { message: 'Invalid game ID or player name' });
+      return;
+    }
     
     const game = games[trimmedId];
     
+    // Additional logging for debugging
     if (!game) {
-      console.log(`Game not found: ${trimmedId}`);
+      console.log(`Game not found: "${trimmedId}"`);
+      
+      // If this player claims to be the creator, let them know the game doesn't exist
+      if (isCreator) {
+        console.log(`Creator attempted to join non-existent game: ${trimmedId}`);
+      }
+      
       socket.emit('error', { message: 'Game not found' });
       return;
     }
-
+    
+    console.log(`Game found with ID: ${trimmedId}, started: ${game.started}`);
+    
     if (game.started) {
       socket.emit('error', { message: 'Game already started' });
       return;
@@ -477,8 +511,6 @@ io.on('connection', (socket) => {
       waitingForNextCard: false,
       gameOver: game.gameOver
     });
-
-    console.log(`Game ${trimmedId}: New cockroach card drawn: ${game.currentCockroach.value}`);
   });
 
   // Play chappal card
