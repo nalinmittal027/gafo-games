@@ -465,6 +465,95 @@ io.on('connection', (socket) => {
     console.log(`Game ${trimmedId} started with ${game.players.length} players`);
   });
 
+  // Play chappal card
+  socket.on('playChappal', ({ gameId, playerName, cardIndex }) => {
+    // Normalize game ID
+    const trimmedId = gameId.trim().toUpperCase();
+    const game = games[trimmedId];
+    
+    if (!game || !game.started || game.gameOver) {
+      return;
+    }
+  
+    const player = game.players.find(p => p.name === playerName);
+    if (!player || player.id !== socket.id) {
+      return;
+    }
+  
+    if (cardIndex < 0 || cardIndex >= player.chappalCards.length) {
+      return;
+    }
+  
+    const chappalCard = player.chappalCards[cardIndex];
+    const cockroachCard = game.currentCockroach;
+  
+    // Remove the played chappal card
+    player.chappalCards.splice(cardIndex, 1);
+  
+    // Process the play - special handling for dummy cards
+    if (cockroachCard.type === 'dummy') {
+      // Changed logic: No points awarded for dummy cards, and timer continues
+      console.log(`${playerName} found ${cockroachCard.subtype} but gets no points.`);
+      
+      // Ensure discardPile is initialized
+      if (!Array.isArray(game.discardPile)) {
+        game.discardPile = [];
+      }
+      
+      // Add both cards to discard pile
+      game.discardPile.push(chappalCard);
+      
+      // Keep the dummy card in play - don't add it to discard pile
+      // and don't clear currentCockroach
+      
+      // Continue the timer for the next card
+      game.waitingForNextCard = true;
+    } else {
+      // Regular cockroach card handling
+      if (chappalCard.value >= cockroachCard.value) {
+        // Player scores points for regular cockroach
+        game.scores[playerName] += cockroachCard.value;
+        console.log(`${playerName} scored ${cockroachCard.value} points!`);
+      }
+  
+      // Ensure discardPile is initialized
+      if (!Array.isArray(game.discardPile)) {
+        game.discardPile = [];
+      }
+      
+      // Add both cards to discard pile
+      game.discardPile.push(chappalCard, cockroachCard);
+      game.currentCockroach = null;
+  
+      // Check if the game is over
+      const allChappalCardsPlayed = game.players.every(p => p.chappalCards.length === 0);
+      
+      if (allChappalCardsPlayed || game.cockroachDeck.length === 0) {
+        game.gameOver = true;
+      } else {
+        // Prepare for next card
+        game.waitingForNextCard = true;
+      }
+    }
+  
+    // Send updated game state to all players
+    io.to(trimmedId).emit('gameState', {
+      started: game.started,
+      cockroachDeck: game.cockroachDeck.length,
+      currentCockroach: game.currentCockroach,
+      discardPile: game.discardPile.length,
+      scores: game.scores,
+      waitingForNextCard: game.waitingForNextCard,
+      gameOver: game.gameOver
+    });
+  
+    // Update player's hand
+    io.to(player.id).emit('currentPlayer', player);
+  
+    // Update player list for everyone
+    io.to(trimmedId).emit('playerList', game.players);
+  });
+  
   // Draw next cockroach card
   socket.on('nextCockroach', ({ gameId }) => {
     // Normalize game ID
@@ -490,6 +579,18 @@ io.on('connection', (socket) => {
       return;
     }
   
+    // If there's currently a dummy card showing, discard it first
+    if (game.currentCockroach && game.currentCockroach.type === 'dummy') {
+      // Ensure discardPile is initialized
+      if (!Array.isArray(game.discardPile)) {
+        game.discardPile = [];
+      }
+      
+      // Discard the current dummy card
+      game.discardPile.push(game.currentCockroach);
+      console.log(`Game ${trimmedId}: Discarded dummy card: ${game.currentCockroach.subtype}`);
+    }
+  
     // Draw the next cockroach card
     game.currentCockroach = game.cockroachDeck.pop();
     game.waitingForNextCard = false;
@@ -511,79 +612,6 @@ io.on('connection', (socket) => {
       waitingForNextCard: false,
       gameOver: game.gameOver
     });
-  });
-
-  // Play chappal card
-  socket.on('playChappal', ({ gameId, playerName, cardIndex }) => {
-    // Normalize game ID
-    const trimmedId = gameId.trim().toUpperCase();
-    const game = games[trimmedId];
-    
-    if (!game || !game.started || game.waitingForNextCard || game.gameOver) {
-      return;
-    }
-  
-    const player = game.players.find(p => p.name === playerName);
-    if (!player || player.id !== socket.id) {
-      return;
-    }
-  
-    if (cardIndex < 0 || cardIndex >= player.chappalCards.length) {
-      return;
-    }
-  
-    const chappalCard = player.chappalCards[cardIndex];
-    const cockroachCard = game.currentCockroach;
-  
-    // Remove the played chappal card
-    player.chappalCards.splice(cardIndex, 1);
-  
-    // Process the play - special handling for dummy cards
-    if (cockroachCard.type === 'dummy') {
-      // Player automatically wins against dummy cards
-      game.scores[playerName] += 1; // Award 1 point for dummy cards
-      console.log(`${playerName} found ${cockroachCard.subtype} and scored 1 point!`);
-    } else if (chappalCard.value >= cockroachCard.value) {
-      // Player scores points for regular cockroach
-      game.scores[playerName] += cockroachCard.value;
-      console.log(`${playerName} scored ${cockroachCard.value} points!`);
-    }
-  
-    // Ensure discardPile is initialized
-    if (!Array.isArray(game.discardPile)) {
-      game.discardPile = [];
-    }
-    
-    // Add both cards to discard pile
-    game.discardPile.push(chappalCard, cockroachCard);
-    game.currentCockroach = null;
-  
-    // Check if the game is over
-    const allChappalCardsPlayed = game.players.every(p => p.chappalCards.length === 0);
-    
-    if (allChappalCardsPlayed || game.cockroachDeck.length === 0) {
-      game.gameOver = true;
-    } else {
-      // Prepare for next card
-      game.waitingForNextCard = true;
-    }
-  
-    // Send updated game state to all players
-    io.to(trimmedId).emit('gameState', {
-      started: game.started,
-      cockroachDeck: game.cockroachDeck.length,
-      currentCockroach: game.currentCockroach,
-      discardPile: game.discardPile.length,
-      scores: game.scores,
-      waitingForNextCard: game.waitingForNextCard,
-      gameOver: game.gameOver
-    });
-  
-    // Update player's hand
-    io.to(player.id).emit('currentPlayer', player);
-  
-    // Update player list for everyone
-    io.to(trimmedId).emit('playerList', game.players);
   });
 
   // Handle disconnect

@@ -475,85 +475,86 @@ const Game = () => {
         </div>
       )}
 
-      {gameState.started && !gameState.gameOver && (
-        <div className="game-board">
-          <div className="player-info">
-            <h3>Your Score: {gameState.scores[currentPlayer?.name] || 0}</h3>
-          </div>
+{gameState.started && !gameState.gameOver && (
+  <div className="game-board">
+    <div className="player-info">
+      <h3>Your Score: {gameState.scores[currentPlayer?.name] || 0}</h3>
+    </div>
 
-          <div className="center-area">
-            <div className="cockroach-deck">
-              <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
-              <div className="card card-back"></div>
-            </div>
+    <div className="center-area">
+      <div className="cockroach-deck">
+        <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
+        <div className="card card-back"></div>
+      </div>
 
-            {gameState.currentCockroach && (
-              <div className="current-cockroach">
-                <h3>Current Cockroach</h3>
-                <div className="card cockroach-card">
-                  {gameState.currentCockroach.type === 'dummy' ? (
-                    <div className="dummy-card-content">
-                      <div className="card-image">
-                        {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
-                        {gameState.currentCockroach.subtype === 'almond' && '🥜'}
-                        {gameState.currentCockroach.subtype === 'button' && '🔘'}
-                        {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
-                        {gameState.currentCockroach.subtype === 'ant' && '🐜'}
-                      </div>
-                      <div className="card-name">{gameState.currentCockroach.subtype}</div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="cockroach-image">🪳</div>
-                      <div className="card-value">{gameState.currentCockroach.value}</div>
-                    </>
-                  )}
+      {gameState.currentCockroach && (
+        <div className="current-cockroach">
+          <h3>Current Cockroach</h3>
+          <div className="card cockroach-card">
+            {gameState.currentCockroach.type === 'dummy' ? (
+              <div className="dummy-card-content">
+                <div className="card-image">
+                  {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
+                  {gameState.currentCockroach.subtype === 'almond' && '🥜'}
+                  {gameState.currentCockroach.subtype === 'button' && '🔘'}
+                  {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
+                  {gameState.currentCockroach.subtype === 'ant' && '🐜'}
                 </div>
+                <div className="card-name">{gameState.currentCockroach.subtype}</div>
               </div>
+            ) : (
+              <>
+                <div className="cockroach-image">🪳</div>
+                <div className="card-value">{gameState.currentCockroach.value}</div>
+              </>
             )}
-
-            {gameState.waitingForNextCard && (
-              <div className="countdown">
-                Next card in: {countdown}s
-              </div>
-            )}
-          </div>
-
-          <div className="opponent-area">
-            <h3>Other Players:</h3>
-            <div className="opponents">
-              {players
-                .filter(player => player.id !== currentPlayer?.id)
-                .map(player => (
-                  <div key={player.id} className="opponent">
-                    <p>{player.name}: {gameState.scores[player.name] || 0} points</p>
-                    <div className="opponent-cards">
-                      {player.chappalCards?.map((_, index) => (
-                        <div key={index} className="card card-back small"></div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          <div className="player-hand">
-            <h3>Your Chappal Cards:</h3>
-            <div className="hand">
-              {currentPlayer?.chappalCards?.map((card, index) => (
-                <div
-                  key={index}
-                  className={`card chappal-card ${gameState.waitingForNextCard ? 'disabled' : ''}`}
-                  onClick={() => playChappalCard(index)}
-                >
-                  <div className="chappal-image">👡</div>
-                  <div className="card-value">{card.value}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       )}
+
+      {gameState.waitingForNextCard && (
+        <div className="countdown">
+          Next card in: {countdown}s
+        </div>
+      )}
+    </div>
+
+    {/* Move player's hand right after center area */}
+    <div className="player-hand">
+      <h3>Your Chappal Cards:</h3>
+      <div className="hand">
+        {currentPlayer?.chappalCards?.map((card, index) => (
+          <div
+            key={index}
+            className={`card chappal-card ${gameState.waitingForNextCard ? 'disabled' : ''}`}
+            onClick={() => playChappalCard(index)}
+          >
+            <div className="chappal-image">👡</div>
+            <div className="card-value">{card.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="opponent-area">
+      <h3>Other Players:</h3>
+      <div className="opponents">
+        {players
+          .filter(player => player.id !== currentPlayer?.id)
+          .map(player => (
+            <div key={player.id} className="opponent">
+              <p>{player.name}: {gameState.scores[player.name] || 0} points</p>
+              <div className="opponent-cards">
+                {player.chappalCards?.map((_, index) => (
+                  <div key={index} className="card card-back small"></div>
+                ))}
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  </div>
+)}
 
       {gameState.gameOver && (
         <div className="game-over">
