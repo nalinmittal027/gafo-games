@@ -304,22 +304,42 @@ const Game = () => {
   };
 
   // Countdown timer for next cockroach card
-  useEffect(() => {
-    let timer;
-    if (gameState.started && gameState.waitingForNextCard && !gameState.gameOver) {
-      timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            socket.emit('nextCockroach', { gameId: normalizedGameId });
-            return 3;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, normalizedGameId]);
+// This code should be updated in your Game.js component
+
+// Specifically, update the useEffect that handles the countdown timer:
+
+// Countdown timer for next cockroach card
+useEffect(() => {
+  let timer;
+  if (gameState.started && gameState.waitingForNextCard && !gameState.gameOver) {
+    timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          socket.emit('nextCockroach', { gameId: normalizedGameId });
+          return 3;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  } else if (gameState.started && gameState.currentCockroach?.type === 'dummy' && !gameState.gameOver) {
+    // Special case: When a dummy card is shown, also run a timer
+    // This ensures a new card is drawn even if no one plays on the dummy card
+    timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          socket.emit('nextCockroach', { gameId: normalizedGameId });
+          return 3;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+  
+  return () => clearInterval(timer);
+}, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, 
+    gameState.currentCockroach?.type, socket, normalizedGameId]);
 
   // Function to get appropriate card graphic
   const getCardGraphic = (card) => {
