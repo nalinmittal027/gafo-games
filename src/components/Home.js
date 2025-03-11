@@ -1,4 +1,4 @@
-// src/components/Home.js - Fixed Game Creation Flow
+// src/components/Home.js - Enhanced Game Creation Flow
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -32,6 +32,12 @@ const Home = () => {
           setGameId(urlGameId);
         }
       }
+    }
+
+    // Check for pending game ID from previous navigation
+    const pendingGameId = localStorage.getItem('pendingGameId');
+    if (pendingGameId) {
+      setGameId(pendingGameId);
     }
 
     const savedName = localStorage.getItem('playerName');
@@ -87,6 +93,9 @@ const Home = () => {
         // IMPORTANT: Set creator status BEFORE navigating
         localStorage.setItem('gameCreator', gameId);
         
+        // Clear any pending game ID
+        localStorage.removeItem('pendingGameId');
+        
         // Give the server a moment to set up the game before joining
         setTimeout(() => {
           setLoading(false);
@@ -99,6 +108,7 @@ const Home = () => {
         setLoading(false);
         if (exists) {
           localStorage.removeItem('gameCreator'); // Not the creator
+          localStorage.removeItem('pendingGameId'); // Clear pending ID
           navigate(`/game/${foundGameId}`);
         } else {
           setError('Game not found. Please check the Game ID');
@@ -190,6 +200,26 @@ const Home = () => {
     }
   };
 
+  const generateGameLink = () => {
+    if (!gameId.trim()) {
+      setError('Please enter a game ID to generate a link');
+      return;
+    }
+    
+    const trimmedId = gameId.trim().toUpperCase();
+    const gameLink = `${window.location.origin}/game/${trimmedId}`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(gameLink)
+      .then(() => {
+        alert(`Game link copied to clipboard: ${gameLink}`);
+      })
+      .catch(err => {
+        console.error('Could not copy link:', err);
+        alert(`Game link (copy manually): ${gameLink}`);
+      });
+  };
+
   return (
     <div className="home-container">
       <h1>Chappal vs Cockroach</h1>
@@ -236,16 +266,51 @@ const Home = () => {
             disabled={loading}
           />
         </div>
-        <button 
-          className="join-game-btn" 
-          onClick={handleJoinGame}
-          disabled={loading || socketStatus !== 'connected'}
-        >
-          {loading ? 'Joining...' : 'Join Game'}
-        </button>
+        <div className="join-actions">
+          <button 
+            className="join-game-btn" 
+            onClick={handleJoinGame}
+            disabled={loading || socketStatus !== 'connected'}
+          >
+            {loading ? 'Joining...' : 'Join Game'}
+          </button>
+          <button 
+            className="generate-link-btn" 
+            onClick={generateGameLink}
+            disabled={!gameId.trim()}
+          >
+            Generate Game Link
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
+      
+      <div className="game-rules">
+        <h2>Game Rules</h2>
+        <div className="rules-container">
+          <h3>Game Mechanics</h3>
+          <ul>
+            <li>Each player gets chappal cards with values from 2-8.</li>
+            <li>Each chappal card has two sides: white and dark.</li>
+            <li>The game runs for 3 rounds with different rules in each round.</li>
+            <li>In each round, cockroach cards (white or dark) are revealed one by one.</li>
+            <li>Players must play a matching color chappal to defeat a cockroach.</li>
+            <li>White chappal can only defeat white cockroach; dark chappal can only defeat dark cockroach.</li>
+            <li>Dummy cards (safetypin, almond, etc.) provide no points and discard your chappal when played.</li>
+          </ul>
+          
+          <h3>Round Rules</h3>
+          <ul>
+            <li><strong>Round 1:</strong> Your chappal value must be HIGHER or EQUAL to the cockroach value.</li>
+            <li><strong>Round 2:</strong> Your chappal value must be LOWER or EQUAL to the cockroach value.</li>
+            <li><strong>Round 3:</strong> White chappal must be HIGHER or EQUAL; Dark chappal must be LOWER or EQUAL.</li>
+          </ul>
+          
+          <h3>Winning</h3>
+          <p>The player with the highest total score after all 3 rounds wins the game!</p>
+        </div>
+      </div>
       
       <style>{`
         .socket-status {
@@ -267,6 +332,47 @@ const Home = () => {
           padding: 5px 10px;
           font-size: 12px;
           cursor: pointer;
+        }
+        .join-actions {
+          display: flex;
+          gap: 10px;
+          margin-top: 15px;
+        }
+        .generate-link-btn {
+          background-color: #673AB7;
+          color: white;
+          border: none;
+          padding: 14px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s;
+          flex: 1;
+        }
+        .join-game-btn {
+          flex: 1;
+        }
+        .game-rules {
+          margin-top: 40px;
+          text-align: left;
+        }
+        .rules-container {
+          background-color: #f9f9f9;
+          padding: 20px;
+          border-radius: 10px;
+          margin-top: 15px;
+        }
+        .rules-container h3 {
+          color: #FF5722;
+          margin-top: 15px;
+          margin-bottom: 10px;
+        }
+        .rules-container ul {
+          padding-left: 20px;
+        }
+        .rules-container li {
+          margin-bottom: 8px;
         }
       `}</style>
     </div>

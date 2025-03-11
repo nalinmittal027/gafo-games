@@ -1,4 +1,4 @@
-// src/components/Game.js - Enhanced version with card graphics
+// src/components/Game.js - Enhanced version with dark/white card graphics
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
@@ -6,21 +6,39 @@ import io from 'socket.io-client';
 // Card graphics - simple ASCII art for now
 const CARD_GRAPHICS = {
   // Chappal card graphics
-  chappal: `
+  chappalWhite: `
    _________
   /         \\
+ |  WHITE    |
  |  CHAPPAL  |
+ |    👡     |
  |           |
+ |___________|
+  `,
+  chappalDark: `
+   _________
+  /         \\
+ |  DARK     |
+ |  CHAPPAL  |
  |    👡     |
  |           |
  |___________|
   `,
   // Cockroach card graphics
-  cockroach: `
+  cockroachWhite: `
    _________
   /         \\
+ | WHITE     |
  | COCKROACH |
+ |    🪳     |
  |           |
+ |___________|
+  `,
+  cockroachDark: `
+   _________
+  /         \\
+ | DARK      |
+ | COCKROACH |
  |    🪳     |
  |           |
  |___________|
@@ -86,7 +104,10 @@ const Game = () => {
     currentCockroach: null,
     discardPile: [],
     scores: {},
+    roundScores: {},
+    currentRound: 1,
     waitingForNextCard: false,
+    waitingForNextRound: false,
     gameOver: false
   });
   const [countdown, setCountdown] = useState(3);
@@ -165,18 +186,18 @@ const Game = () => {
       setConnected(true);
       setError('');
       
-    // If the user is the creator, wait a bit before trying to join
-    // This ensures the server has time to properly set up the game
-    if (isCreator) {
-      console.log('Creator is joining with short delay to ensure game is ready');
-      setTimeout(() => {
+      // If the user is the creator, wait a bit before trying to join
+      // This ensures the server has time to properly set up the game
+      if (isCreator) {
+        console.log('Creator is joining with short delay to ensure game is ready');
+        setTimeout(() => {
+          joinGame(newSocket);
+        }, 500);
+      } else {
+        // Regular player joins immediately
         joinGame(newSocket);
-      }, 500);
-    } else {
-      // Regular player joins immediately
-      joinGame(newSocket);
-    }
-  });
+      }
+    });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err);
@@ -212,6 +233,11 @@ const Game = () => {
     newSocket.on('gameState', (state) => {
       console.log('Received game state:', state);
       setGameState(state);
+      
+      // Reset countdown when a new card is shown
+      if (state.waitingForNextCard) {
+        setCountdown(3);
+      }
     });
 
     newSocket.on('playerList', (playerList) => {
@@ -286,71 +312,82 @@ const Game = () => {
 
   const startGame = () => {
     if (socket && isHost) {
-      console.log('Requesting to start game');
+      console.log('Requesting to start game or next round');
       socket.emit('startGame', { gameId: normalizedGameId });
     } else {
       console.log('Not allowed to start game, host status:', isHost);
     }
   };
 
-  const playChappalCard = (cardIndex) => {
-    if (socket && gameState.started && !gameState.waitingForNextCard && !gameState.gameOver) {
+  const playChappalCard = (cardIndex, isFlipped) => {
+    if (socket && gameState.started && !gameState.waitingForNextCard && !gameState.gameOver && !gameState.waitingForNextRound) {
       socket.emit('playChappal', { 
         gameId: normalizedGameId, 
         playerName: currentPlayer.name, 
-        cardIndex 
+        cardIndex,
+        isFlipped  // Pass whether the card is flipped (dark side)
       });
     }
   };
 
   // Countdown timer for next cockroach card
-// This code should be updated in your Game.js component
+  useEffect(() => {
+    let timer;
+    // Only run timer when in waiting state
+    if (gameState.started && gameState.waitingForNextCard && !gameState.gameOver && !gameState.waitingForNextRound) {
+      console.log("Starting countdown timer");
+      timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            console.log("Timer reached zero, drawing next card");
+            clearInterval(timer);
+            socket.emit('nextCockroach', { gameId: normalizedGameId });
+            return 3;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, gameState.waitingForNextRound, socket, normalizedGameId]);
 
-// Specifically, update the useEffect that handles the countdown timer:
-
-// Countdown timer for next cockroach card
-useEffect(() => {
-  let timer;
-  // Only run timer when in waiting state
-  if (gameState.started && gameState.waitingForNextCard && !gameState.gameOver) {
-    console.log("Starting countdown timer");
-    timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          console.log("Timer reached zero, drawing next card");
-          clearInterval(timer);
-          socket.emit('nextCockroach', { gameId: normalizedGameId });
-          return 3;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }
-  
-  return () => {
-    if (timer) {
-      clearInterval(timer);
+  // Function to get the current round rule text
+  const getRoundRuleText = () => {
+    switch (gameState.currentRound) {
+      case 1:
+        return "Round 1: HIGHER or EQUAL rule";
+      case 2:
+        return "Round 2: LOWER or EQUAL rule";
+      case 3:
+        return "Round 3: White Chappal (HIGHER), Dark Chappal (LOWER)";
+      default:
+        return "";
     }
   };
-}, [gameState.started, gameState.waitingForNextCard, gameState.gameOver, socket, normalizedGameId]);
-
 
   // Function to get appropriate card graphic
-  const getCardGraphic = (card) => {
+  const getCardGraphic = (card, isFlipped) => {
     if (!card) return null;
     
     if (card.type === 'chappal') {
       return (
-        <div className="card-graphic">
+        <div className={`card-graphic chappal-${isFlipped ? 'dark' : 'white'}`}>
           <div className="card-image chappal-image">👡</div>
           <div className="card-value">{card.value}</div>
+          <div className="card-color">{isFlipped ? 'Dark' : 'White'}</div>
         </div>
       );
     } else if (card.type === 'cockroach') {
       return (
-        <div className="card-graphic">
+        <div className={`card-graphic cockroach-${card.color}`}>
           <div className="card-image cockroach-image">🪳</div>
           <div className="card-value">{card.value}</div>
+          <div className="card-color">{card.color.charAt(0).toUpperCase() + card.color.slice(1)}</div>
         </div>
       );
     } else if (card.type === 'dummy') {
@@ -363,7 +400,7 @@ useEffect(() => {
       };
       
       return (
-        <div className="card-graphic">
+        <div className="card-graphic dummy-card">
           <div className="card-image dummy-image">{dummyGraphics[card.subtype] || '❓'}</div>
           <div className="card-name">{card.subtype}</div>
         </div>
@@ -489,102 +526,201 @@ useEffect(() => {
         </div>
       )}
 
-{gameState.started && !gameState.gameOver && (
-  <div className="game-board">
-    <div className="player-info">
-      <h3>Your Score: {gameState.scores[currentPlayer?.name] || 0}</h3>
-    </div>
-
-    <div className="center-area">
-  <div className="cockroach-deck">
-    <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
-    <div className="card card-back"></div>
-  </div>
-
-  {gameState.currentCockroach && (
-    <div className="current-cockroach">
-      <h3>Current Cockroach</h3>
-      <div className="card cockroach-card">
-        {gameState.currentCockroach.type === 'dummy' ? (
-          <div className="dummy-card-content">
-            <div className="card-image">
-              {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
-              {gameState.currentCockroach.subtype === 'almond' && '🥜'}
-              {gameState.currentCockroach.subtype === 'button' && '🔘'}
-              {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
-              {gameState.currentCockroach.subtype === 'ant' && '🐜'}
+      {gameState.started && !gameState.gameOver && !gameState.waitingForNextRound && (
+        <div className="game-board">
+          <div className="scoreboard">
+            <h3>Round {gameState.currentRound} of 3</h3>
+            <div className="round-rule">{getRoundRuleText()}</div>
+            <div className="score-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Round 1</th>
+                    <th>Round 2</th>
+                    <th>Round 3</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.keys(gameState.scores).map(playerName => (
+                    <tr key={playerName} className={playerName === currentPlayer?.name ? 'current-player-row' : ''}>
+                      <td>{playerName} {playerName === currentPlayer?.name ? '(You)' : ''}</td>
+                      <td>{gameState.roundScores?.[playerName]?.[0] || 0}</td>
+                      <td>{gameState.roundScores?.[playerName]?.[1] || 0}</td>
+                      <td>{gameState.roundScores?.[playerName]?.[2] || 0}</td>
+                      <td className="total-score">{gameState.scores[playerName] || 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="card-name">{gameState.currentCockroach.subtype}</div>
           </div>
-        ) : (
-          <>
-            <div className="cockroach-image">🪳</div>
-            <div className="card-value">{gameState.currentCockroach.value}</div>
-          </>
-        )}
-      </div>
-    </div>
-  )}
 
-  {gameState.waitingForNextCard && (
-    <div className="countdown">
-      Next card in: {countdown}s
-    </div>
-  )}
-</div>
+          <div className="center-area">
+            <div className="cockroach-deck">
+              <h3>Cockroach Deck ({gameState.cockroachDeck} remaining)</h3>
+              <div className="card card-back"></div>
+            </div>
 
-    {/* Move player's hand right after center area */}
-    <div className="player-hand">
-      <h3>Your Chappal Cards:</h3>
-      <div className="hand">
-        {currentPlayer?.chappalCards?.map((card, index) => (
-          <div
-            key={index}
-            className={`card chappal-card ${gameState.waitingForNextCard ? 'disabled' : ''}`}
-            onClick={() => playChappalCard(index)}
-          >
-            <div className="chappal-image">👡</div>
-            <div className="card-value">{card.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    <div className="opponent-area">
-      <h3>Other Players:</h3>
-      <div className="opponents">
-        {players
-          .filter(player => player.id !== currentPlayer?.id)
-          .map(player => (
-            <div key={player.id} className="opponent">
-              <p>{player.name}: {gameState.scores[player.name] || 0} points</p>
-              <div className="opponent-cards">
-                {player.chappalCards?.map((_, index) => (
-                  <div key={index} className="card card-back small"></div>
-                ))}
+            {gameState.currentCockroach && (
+              <div className="current-cockroach">
+                <h3>Current Card</h3>
+                <div className={`card ${gameState.currentCockroach.type === 'cockroach' ? 
+                  `cockroach-card ${gameState.currentCockroach.color}-card` : 'dummy-card'}`}>
+                  {gameState.currentCockroach.type === 'dummy' ? (
+                    <div className="dummy-card-content">
+                      <div className="card-image">
+                        {gameState.currentCockroach.subtype === 'safetyPin' && '📌'}
+                        {gameState.currentCockroach.subtype === 'almond' && '🥜'}
+                        {gameState.currentCockroach.subtype === 'button' && '🔘'}
+                        {gameState.currentCockroach.subtype === 'dogShit' && '💩'}
+                        {gameState.currentCockroach.subtype === 'ant' && '🐜'}
+                      </div>
+                      <div className="card-name">{gameState.currentCockroach.subtype}</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="cockroach-image">🪳</div>
+                      <div className="card-value">{gameState.currentCockroach.value}</div>
+                      <div className="card-color">
+                        {gameState.currentCockroach.color === 'dark' ? 'Dark' : 'White'}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
+            )}
+
+            {gameState.waitingForNextCard && (
+              <div className="countdown">
+                Next card in: {countdown}s
+              </div>
+            )}
+          </div>
+
+          {/* Player's hand */}
+          <div className="player-hand">
+            <h3>Your Chappal Cards:</h3>
+            <div className="hand">
+              {currentPlayer?.chappalCards?.map((card, index) => (
+                <div key={index} className="chappal-card-container">
+                  <div
+                    className={`card chappal-card ${gameState.waitingForNextCard ? 'disabled' : ''}`}
+                  >
+                    <div className="chappal-image">👡</div>
+                    <div className="card-value">{card.value}</div>
+                  </div>
+                  <div className="chappal-card-buttons">
+                    <button
+                      className="play-white-btn"
+                      onClick={() => playChappalCard(index, false)}
+                      disabled={gameState.waitingForNextCard}
+                    >
+                      Play White
+                    </button>
+                    <button
+                      className="play-dark-btn"
+                      onClick={() => playChappalCard(index, true)}
+                      disabled={gameState.waitingForNextCard}
+                    >
+                      Play Dark
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-      </div>
-    </div>
-  </div>
-)}
+          </div>
+
+          <div className="opponent-area">
+            <h3>Other Players:</h3>
+            <div className="opponents">
+              {players
+                .filter(player => player.id !== currentPlayer?.id)
+                .map(player => (
+                  <div key={player.id} className="opponent">
+                    <p>{player.name}: {gameState.scores[player.name] || 0} points</p>
+                    <div className="opponent-cards">
+                      {Array.from({ length: player.chappalCards?.length || 0 }).map((_, index) => (
+                        <div key={index} className="card card-back small"></div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {gameState.waitingForNextRound && !gameState.gameOver && (
+        <div className="round-transition">
+          <h2>Round {gameState.currentRound} Completed!</h2>
+          <div className="round-scores">
+            <h3>Current Scores:</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Round {gameState.currentRound}</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(gameState.scores).map(playerName => (
+                  <tr key={playerName} className={playerName === currentPlayer?.name ? 'current-player-row' : ''}>
+                    <td>{playerName} {playerName === currentPlayer?.name ? '(You)' : ''}</td>
+                    <td>{gameState.roundScores[playerName][gameState.currentRound - 1]}</td>
+                    <td>{gameState.scores[playerName]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {isHost && (
+            <div className="host-controls">
+              <h3>Ready for Round {gameState.currentRound + 1}?</h3>
+              <button onClick={startGame} className="start-round-btn">
+                Start Round {gameState.currentRound + 1}
+              </button>
+            </div>
+          )}
+          
+          {!isHost && (
+            <p className="waiting-for-host">Waiting for the host to start the next round...</p>
+          )}
+        </div>
+      )}
 
       {gameState.gameOver && (
         <div className="game-over">
           <h2>Game Over!</h2>
           <div className="final-scores">
             <h3>Final Scores:</h3>
-            <ul>
-              {Object.entries(gameState.scores)
-                .sort(([, a], [, b]) => b - a)
-                .map(([name, score], index) => (
-                  <li key={name}>
-                    {index + 1}. {name}: {score} points
-                    {name === currentPlayer?.name ? ' (You)' : ''}
-                  </li>
-                ))}
-            </ul>
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Round 1</th>
+                  <th>Round 2</th>
+                  <th>Round 3</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(gameState.scores)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([name], index) => (
+                    <tr key={name} className={name === currentPlayer?.name ? 'current-player-row' : ''}>
+                      <td>{index + 1}. {name} {name === currentPlayer?.name ? '(You)' : ''}</td>
+                      <td>{gameState.roundScores[name][0] || 0}</td>
+                      <td>{gameState.roundScores[name][1] || 0}</td>
+                      <td>{gameState.roundScores[name][2] || 0}</td>
+                      <td className="total-score">{gameState.scores[name]}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
           <button onClick={() => navigate('/')} className="back-to-home">Back to Home</button>
         </div>
@@ -640,12 +776,64 @@ useEffect(() => {
           margin-top: 5px;
         }
         
-        .cockroach-card {
-          background: linear-gradient(145deg, #8B4513, #A0522D);
+        .card-color {
+          font-size: 14px;
+          margin-top: 5px;
+          padding: 2px 8px;
+          border-radius: 10px;
+          background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .cockroach-card.dark-card {
+          background: linear-gradient(145deg, #5D4037, #795548);
+        }
+        
+        .cockroach-card.white-card {
+          background: linear-gradient(145deg, #B0BEC5, #CFD8DC);
+          color: #333;
         }
         
         .chappal-card {
           background: linear-gradient(145deg, #4682B4, #5F9EA0);
+          color: white;
+        }
+        
+        .chappal-card-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin: 0 10px;
+        }
+        
+        .chappal-card-buttons {
+          display: flex;
+          gap: 5px;
+          margin-top: 10px;
+        }
+        
+        .play-white-btn {
+          background-color: #ECEFF1;
+          color: #333;
+          border: none;
+          padding: 5px 10px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        
+        .play-dark-btn {
+          background-color: #5D4037;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          border-radius: 5px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        
+        .play-white-btn:disabled, .play-dark-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         
         .dummy-card-content {
@@ -654,6 +842,114 @@ useEffect(() => {
           align-items: center;
           justify-content: center;
           height: 100%;
+        }
+        
+        .dummy-card {
+          background: linear-gradient(145deg, #FF9800, #FFA726);
+          color: white;
+        }
+        
+        .scoreboard {
+          background-color: #f5f5f5;
+          padding: 15px;
+          border-radius: 10px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .round-rule {
+          background-color: #303F9F;
+          color: white;
+          padding: 10px;
+          border-radius: 5px;
+          text-align: center;
+          margin: 10px 0;
+          font-weight: bold;
+        }
+        
+        .score-table {
+          overflow-x: auto;
+        }
+        
+        .score-table table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10px;
+        }
+        
+        .score-table th, .score-table td {
+          padding: 10px;
+          text-align: center;
+          border: 1px solid #ddd;
+        }
+        
+        .score-table th {
+          background-color: #303F9F;
+          color: white;
+        }
+        
+        .current-player-row {
+          background-color: rgba(33, 150, 243, 0.1);
+          font-weight: bold;
+        }
+        
+        .total-score {
+          font-weight: bold;
+          color: #2196F3;
+        }
+        
+        .round-transition {
+          text-align: center;
+          padding: 30px;
+          background-color: rgba(33, 150, 243, 0.1);
+          border-radius: 10px;
+          margin: 20px 0;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .round-scores {
+          max-width: 600px;
+          margin: 20px auto;
+        }
+        
+        .round-scores table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        
+        .round-scores th, .round-scores td {
+          padding: 10px;
+          text-align: center;
+          border: 1px solid #ddd;
+        }
+        
+        .round-scores th {
+          background-color: #303F9F;
+          color: white;
+        }
+        
+        .start-round-btn {
+          background-color: #FF5722;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 20px;
+          transition: all 0.3s;
+        }
+        
+        .start-round-btn:hover {
+          background-color: #E64A19;
+          transform: translateY(-2px);
+        }
+        
+        .waiting-for-host {
+          margin-top: 20px;
+          font-style: italic;
+          color: #666;
         }
       `}</style>
     </div>
