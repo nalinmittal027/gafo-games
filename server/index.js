@@ -7,6 +7,17 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
+// Create the HTTP server first
+const server = http.createServer(app);
+
+// Then create the Socket.IO server
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
+
 // Add this to debug connection issues
 app.get('/ping', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
@@ -30,12 +41,7 @@ app.get('/games/debug', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
-// Make sure you have correct logging
-console.log(`Attempting to start server on port ${PORT}...`);
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+
 
 // Game state storage
 const games = {};
@@ -91,13 +97,6 @@ app.get('/game/:id', (req, res) => {
   res.json(safeGame);
 });
 
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
-  }
-});
 
 // Generate Cockroach deck with improved distribution (dark/white 1-9) and dummy cards
 const generateCockroachDeck = (playerCount) => {
@@ -991,4 +990,11 @@ io.on('connection', (socket) => {
       }
     }
   });
+});
+
+const PORT = process.env.PORT || 3001;
+// Make sure you have correct logging
+console.log(`Attempting to start server on port ${PORT}...`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
