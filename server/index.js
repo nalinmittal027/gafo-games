@@ -11,6 +11,30 @@ app.use(cors());
 app.get('/ping', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.send('pong');
+app.get('/games/debug', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  const gamesList = Object.keys(games).map(id => ({
+    id: id,
+    idLength: id.length,
+    normalized: id.toUpperCase(),
+    players: games[id].players.length,
+    started: games[id].started,
+    currentRound: games[id].currentRound,
+    createdAt: new Date(games[id].created).toISOString()
+  }));
+})
+  res.json({
+    totalGames: gamesList.length,
+    games: gamesList,
+    gamesObject: games
+  });
+});
+
+const PORT = process.env.PORT || 3001;
+// Make sure you have correct logging
+console.log(`Attempting to start server on port ${PORT}...`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Game state storage
@@ -60,6 +84,7 @@ app.get('/game/:id', (req, res) => {
     scores: game.scores,
     roundScores: game.roundScores,
     waitingForNextCard: game.waitingForNextCard,
+    waitingForNextRound: game.waitingForNextRound || false,
     gameOver: game.gameOver
   };
   
@@ -205,11 +230,14 @@ io.on('connection', (socket) => {
       cockroachDeck: [],
       currentCockroach: null,
       discardPile: [],
+      playedCards: [], // Added for Bug Fix #1
       scores: {},
       roundScores: {}, // Track scores by round
       currentRound: 1, // Track current round
       waitingForNextCard: false,
-      gameOver: false
+      waitingForNextRound: false,
+      gameOver: false,
+      showDiscardPrompt: false // Added for Bug Fix #3
     };
   
     // Initialize player score
@@ -244,7 +272,9 @@ io.on('connection', (socket) => {
       roundScores: games[gameId].roundScores,
       currentRound: games[gameId].currentRound,
       waitingForNextCard: false,
-      gameOver: false
+      waitingForNextRound: false,
+      gameOver: false,
+      showDiscardPrompt: false
     });
   });
 
@@ -398,9 +428,14 @@ io.on('connection', (socket) => {
     // Send updated player list to all players in the game
     io.to(trimmedId).emit('playerList', game.players);
     
-    // Ensure discardPile is defined and initialized
+    // Ensure discardPile is initialized
     if (!Array.isArray(game.discardPile)) {
       game.discardPile = [];
+    }
+    
+    // Ensure playedCards is initialized
+    if (!Array.isArray(game.playedCards)) {
+      game.playedCards = [];
     }
     
     // Send game state
@@ -413,7 +448,9 @@ io.on('connection', (socket) => {
       roundScores: game.roundScores,
       currentRound: game.currentRound,
       waitingForNextCard: game.waitingForNextCard,
-      gameOver: game.gameOver
+      waitingForNextRound: game.waitingForNextRound || false,
+      gameOver: game.gameOver,
+      showDiscardPrompt: game.showDiscardPrompt || false
     });
 
     console.log(`${trimmedName} joined game ${trimmedId}, host: ${playerIsHost}`);
@@ -458,6 +495,7 @@ io.on('connection', (socket) => {
         game.cockroachDeck = generateCockroachDeck(game.players.length);
         game.currentCockroach = null;
         game.discardPile = [];
+        game.playedCards = [];
         
         console.log(`Starting round ${game.currentRound} for game ${trimmedId}`);
         
@@ -472,7 +510,8 @@ io.on('connection', (socket) => {
           currentRound: game.currentRound,
           waitingForNextCard: true,
           waitingForNextRound: false,
-          gameOver: false
+          gameOver: false,
+          showDiscardPrompt: false
         });
         
         // Update each player with their cards
@@ -506,6 +545,7 @@ io.on('connection', (socket) => {
     game.started = true;
     game.currentRound = 1;
     game.cockroachDeck = generateCockroachDeck(game.players.length);
+    game.playedCards = [];
     
     // Give each player their Chappal cards
     game.players.forEach(player => {
@@ -530,7 +570,9 @@ io.on('connection', (socket) => {
       roundScores: game.roundScores,
       currentRound: game.currentRound,
       waitingForNextCard: game.waitingForNextCard,
-      gameOver: false
+      waitingForNextRound: false,
+      gameOver: false,
+      showDiscardPrompt: false
     });
 
     // Update each player with their cards
@@ -544,7 +586,7 @@ io.on('connection', (socket) => {
     console.log(`Game ${trimmedId} started with ${game.players.length} players`);
   });
 
-  // Play chappal card
+  // Play chappal card - BUG FIX #1 and #2
   socket.on('playChappal', ({ gameId, playerName, cardIndex, isFlipped }) => {
     // Normalize game ID
     const trimmedId = gameId.trim().toUpperCase();
@@ -573,82 +615,195 @@ io.on('connection', (socket) => {
 
     // Set the card color based on the flip state
     const chappalColor = isFlipped ? 'dark' : 'white';
+
+    // Remove the played chappal card from the player's hand
+    player.chappalCards.splice(cardIndex, 1);
+
+    // Ensure playedCards array exists in game state
+    if (!Array.isArray(game.playedCards)) {
+      game.playedCards = [];
+    }
+
+    // Add this card to played cards with player info
+    game.playedCards.push({
+      playerName: playerName,
+      chappalCard: { ...chappalCard, playedColor: chappalColor },
+      timestamp: Date.now()
+    });
+
+    // Notify all players about the played card
+    io.to(trimmedId).emit('cardPlayed', {
+      playerName: playerName,
+      cardInfo: { ...chappalCard, playedColor: chappalColor }
+    });
+
+    // Update player's hand
+    io.to(player.id).emit('currentPlayer', player);
+
+    // BUG FIX #1: Process all played cards if this is the first one played
+    // This handles multiple players playing cards simultaneously
+    if (game.playedCards.length === 1) {
+      // Start a short timer to collect other potential played cards
+      setTimeout(() => {
+        processPlayedCards(game, trimmedId);
+      }, 300); // 300ms delay to collect nearly simultaneous plays
+    }
+
+    // Update player list for everyone to show new card counts
+    io.to(trimmedId).emit('playerList', game.players);
+  });
+
+  // Add a new socket handler for discarding current card (Bug fix #3)
+  socket.on('discardCurrentCard', ({ gameId }) => {
+    // Normalize game ID
+    const trimmedId = gameId.trim().toUpperCase();
+    const game = games[trimmedId];
     
-    // Check if colors match (for regular cockroach)
-    const colorsMatch = cockroachCard.type === 'dummy' || 
-                        (cockroachCard.color === chappalColor);
-    
-    if (!colorsMatch && cockroachCard.type !== 'dummy') {
-      // Cannot kill cockroach with wrong color chappal
+    if (!game || !game.started || game.gameOver || game.waitingForNextRound) {
       return;
     }
 
-    // Remove the played chappal card
-    player.chappalCards.splice(cardIndex, 1);
+    // Only discard if we have a current cockroach and we're not waiting for next card
+    if (game.currentCockroach && !game.waitingForNextCard) {
+      // Clear any played cards
+      game.playedCards = [];
+      
+      // Ensure discardPile is initialized
+      if (!Array.isArray(game.discardPile)) {
+        game.discardPile = [];
+      }
+      
+      // Add current card to discard pile
+      game.discardPile.push(game.currentCockroach);
+      console.log(`Game ${trimmedId}: Card discarded by player action`);
+      
+      // Clear current cockroach and set waiting for next card
+      game.currentCockroach = null;
+      game.waitingForNextCard = true;
+      
+      // Reset the timer for next card
+      clearTimeout(game.cardTimer);
+      
+      // Send updated game state to all players
+      io.to(trimmedId).emit('gameState', {
+        started: game.started,
+        cockroachDeck: game.cockroachDeck.length,
+        currentCockroach: null,
+        discardPile: game.discardPile.length,
+        scores: game.scores,
+        roundScores: game.roundScores,
+        currentRound: game.currentRound,
+        waitingForNextCard: true,
+        waitingForNextRound: false,
+        gameOver: game.gameOver,
+        showDiscardPrompt: false
+      });
+    }
+  });
+
+  // Helper function to process all played cards
+  function processPlayedCards(game, gameId) {
+    // If no cards were played or no current cockroach, exit
+    if (!game.playedCards.length || !game.currentCockroach) {
+      return;
+    }
 
     // Ensure discardPile is initialized
     if (!Array.isArray(game.discardPile)) {
       game.discardPile = [];
     }
 
-    let pointsScored = 0;
-
-    // Process the play - special handling for dummy cards
+    // Get the cockroach card
+    const cockroachCard = game.currentCockroach;
+    let pointsAwarded = false;
+    
     if (cockroachCard.type === 'dummy') {
-      // For dummy cards: Player loses their chappal card but gets no points
-      console.log(`${playerName} found ${cockroachCard.subtype} but gets no points.`);
+      // For dummy cards: Players lose their chappal cards but get no points
+      console.log(`Dummy card (${cockroachCard.subtype}) found - no points awarded`);
       
-      // Add only the chappal card to discard pile
-      game.discardPile.push({...chappalCard, playedColor: chappalColor});
+      // Add all played chappal cards to discard pile
+      game.playedCards.forEach(playedCard => {
+        game.discardPile.push(playedCard.chappalCard);
+      });
       
-      // Discard the dummy card and draw a new card immediately
+      // Discard the dummy card
       game.discardPile.push(cockroachCard);
-      game.currentCockroach = null;
-      
-      // Set waiting for next card
-      game.waitingForNextCard = true;
       
     } else {
-      // Regular cockroach card handling - apply different rules based on round
-      let success = false;
+      // Process each played card based on current round rules
       
-      // Check if the play is successful based on round rules
-      if (game.currentRound === 1) {
-        // Round 1: Higher or equal rule
-        success = chappalCard.value >= cockroachCard.value;
-      } else if (game.currentRound === 2) {
-        // Round 2: Lower or equal rule
-        success = chappalCard.value <= cockroachCard.value;
-      } else if (game.currentRound === 3) {
-        // Round 3: Mixed rules
-        if (chappalColor === 'white') {
-          // White chappal: Higher or equal rule
-          success = chappalCard.value >= cockroachCard.value;
-        } else {
-          // Dark chappal: Lower or equal rule
-          success = chappalCard.value <= cockroachCard.value;
+      // Sort played cards by timestamp to respect order they were played
+      game.playedCards.sort((a, b) => a.timestamp - b.timestamp);
+      
+      // Check each played card against rules
+      for (const playedCard of game.playedCards) {
+        const chappalCard = playedCard.chappalCard;
+        const chappalColor = chappalCard.playedColor;
+        const playerName = playedCard.playerName;
+        
+        // Add the chappal card to discard pile
+        game.discardPile.push(chappalCard);
+        
+        // Check if colors match (for regular cockroach) - BUG FIX #2
+        // We process all cards regardless of color match, but only award points for correct color
+        const colorsMatch = cockroachCard.color === chappalColor;
+        
+        // Only award points if colors match
+        if (colorsMatch) {
+          let success = false;
+          
+          // Check if the play is successful based on round rules
+          if (game.currentRound === 1) {
+            // Round 1: Higher or equal rule
+            success = chappalCard.value >= cockroachCard.value;
+          } else if (game.currentRound === 2) {
+            // Round 2: Lower or equal rule
+            success = chappalCard.value <= cockroachCard.value;
+          } else if (game.currentRound === 3) {
+            // Round 3: Mixed rules
+            if (chappalColor === 'white') {
+              // White chappal: Higher or equal rule
+              success = chappalCard.value >= cockroachCard.value;
+            } else {
+              // Dark chappal: Lower or equal rule
+              success = chappalCard.value <= cockroachCard.value;
+            }
+          }
+          
+          if (success && !pointsAwarded) {
+            // First successful play gets the points
+            const pointsScored = cockroachCard.value;
+            game.scores[playerName] += pointsScored;
+            
+            // Update round scores
+            game.roundScores[playerName][game.currentRound - 1] += pointsScored;
+            
+            console.log(`${playerName} scored ${pointsScored} points in round ${game.currentRound}!`);
+            
+            // Notify all clients about the point award
+            io.to(gameId).emit('pointsAwarded', {
+              playerName,
+              points: pointsScored,
+              round: game.currentRound
+            });
+            
+            // Flag that points have been awarded
+            pointsAwarded = true;
+          }
         }
       }
       
-      if (success) {
-        // Player scores points for regular cockroach
-        pointsScored = cockroachCard.value;
-        game.scores[playerName] += pointsScored;
-        
-        // Update round scores
-        game.roundScores[playerName][game.currentRound - 1] += pointsScored;
-        
-        console.log(`${playerName} scored ${pointsScored} points in round ${game.currentRound}!`);
-      }
-      
-      // Add both cards to discard pile
-      game.discardPile.push({...chappalCard, playedColor: chappalColor}, cockroachCard);
-      game.currentCockroach = null;
-
-      // Set waiting for next card
-      game.waitingForNextCard = true;
+      // Discard the cockroach card
+      game.discardPile.push(cockroachCard);
     }
-
+    
+    // Clear the played cards
+    game.playedCards = [];
+    
+    // Set current cockroach to null and waiting for next card
+    game.currentCockroach = null;
+    game.waitingForNextCard = true;
+    
     // Check if the round is over
     const allChappalCardsPlayed = game.players.every(p => p.chappalCards.length === 0);
     const noMoreCockroachCards = game.cockroachDeck.length === 0;
@@ -659,39 +814,34 @@ io.on('connection', (socket) => {
         game.waitingForNextRound = true;
         game.waitingForNextCard = false;
         
-        console.log(`Round ${game.currentRound} completed for game ${trimmedId}`);
+        console.log(`Round ${game.currentRound} completed for game ${gameId}`);
       } else {
         // End of game (all 3 rounds completed)
         game.gameOver = true;
         game.waitingForNextCard = false;
         game.waitingForNextRound = false;
         
-        console.log(`Game ${trimmedId} completed after all 3 rounds`);
+        console.log(`Game ${gameId} completed after all 3 rounds`);
       }
     }
 
     // Send updated game state to all players
-    io.to(trimmedId).emit('gameState', {
+    io.to(gameId).emit('gameState', {
       started: game.started,
       cockroachDeck: game.cockroachDeck.length,
-      currentCockroach: game.currentCockroach,
+      currentCockroach: null,
       discardPile: game.discardPile.length,
       scores: game.scores,
       roundScores: game.roundScores,
       currentRound: game.currentRound,
       waitingForNextCard: game.waitingForNextCard,
       waitingForNextRound: game.waitingForNextRound || false,
-      gameOver: game.gameOver
+      gameOver: game.gameOver,
+      showDiscardPrompt: false
     });
+  }
 
-    // Update player's hand
-    io.to(player.id).emit('currentPlayer', player);
-
-    // Update player list for everyone
-    io.to(trimmedId).emit('playerList', game.players);
-  });
-
-  // Draw next cockroach card
+  // Update the nextCockroach handler to implement BUG FIX #3 - card timeout
   socket.on('nextCockroach', ({ gameId }) => {
     // Normalize game ID
     const trimmedId = gameId.trim().toUpperCase();
@@ -723,7 +873,8 @@ io.on('connection', (socket) => {
         currentRound: game.currentRound,
         waitingForNextCard: false,
         waitingForNextRound: game.waitingForNextRound || false,
-        gameOver: game.gameOver
+        gameOver: game.gameOver,
+        showDiscardPrompt: false
       });
       return;
     }
@@ -741,9 +892,18 @@ io.on('connection', (socket) => {
         game.currentCockroach.subtype : game.currentCockroach.value}`);
     }
 
+    // Clear any existing card timer
+    if (game.cardTimer) {
+      clearTimeout(game.cardTimer);
+    }
+    
+    // Clear any played cards
+    game.playedCards = [];
+
     // Draw the next cockroach card
     game.currentCockroach = game.cockroachDeck.pop();
     game.waitingForNextCard = false;
+    game.showDiscardPrompt = false;
 
     // Log what type of card was drawn
     if (game.currentCockroach.type === 'dummy') {
@@ -751,6 +911,27 @@ io.on('connection', (socket) => {
     } else {
       console.log(`Game ${trimmedId}: Drew a ${game.currentCockroach.color} cockroach card with value ${game.currentCockroach.value}`);
     }
+
+    // BUG FIX #3: Set a timer for card timeout (5 seconds)
+    // After 5 seconds, show a prompt that the card can be discarded
+    game.cardTimer = setTimeout(() => {
+      if (game.currentCockroach) {
+        game.showDiscardPrompt = true;
+        io.to(trimmedId).emit('gameState', {
+          started: game.started,
+          cockroachDeck: game.cockroachDeck.length,
+          currentCockroach: game.currentCockroach,
+          discardPile: game.discardPile.length || 0,
+          scores: game.scores,
+          roundScores: game.roundScores,
+          currentRound: game.currentRound,
+          waitingForNextCard: false,
+          waitingForNextRound: false,
+          gameOver: game.gameOver,
+          showDiscardPrompt: true  // Signal to show the discard prompt
+        });
+      }
+    }, 5000); // 5 seconds timeout
 
     // Send updated game state to all players
     io.to(trimmedId).emit('gameState', {
@@ -763,7 +944,8 @@ io.on('connection', (socket) => {
       currentRound: game.currentRound,
       waitingForNextCard: false,
       waitingForNextRound: false,
-      gameOver: game.gameOver
+      gameOver: game.gameOver,
+      showDiscardPrompt: false  // Reset the discard prompt flag
     });
   });
 
@@ -809,14 +991,4 @@ io.on('connection', (socket) => {
       }
     }
   });
-});
-
-// In your server/index.js file
-const PORT = process.env.PORT || 3001;
-
-// Make sure you have correct logging
-console.log(`Attempting to start server on port ${PORT}...`);
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
 });

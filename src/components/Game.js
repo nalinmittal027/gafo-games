@@ -115,6 +115,8 @@ const Game = () => {
   const [connected, setConnected] = useState(false);
   const [joinAttempted, setJoinAttempted] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [playedCards, setPlayedCards] = useState([]);
+  const [pointsAnimation, setPointsAnimation] = useState(null);
 
   // Normalized gameId for consistency
   const normalizedGameId = gameId?.trim().toUpperCase();
@@ -141,6 +143,21 @@ const Game = () => {
     
     setJoinAttempted(true);
   }, [normalizedGameId]);
+
+  // Function to handle discarding the current card (Bug Fix #3)
+  const discardCurrentCard = () => {
+    if (socket && gameState.showDiscardPrompt && gameState.currentCockroach) {
+      socket.emit('discardCurrentCard', { gameId: normalizedGameId });
+    }
+  };
+
+  // Effect to clear played cards when a new card is drawn
+  useEffect(() => {
+    // Clear played cards when a new card is drawn or when waiting for next card
+    if (gameState.waitingForNextCard || !gameState.currentCockroach) {
+      setPlayedCards([]);
+    }
+  }, [gameState.waitingForNextCard, gameState.currentCockroach]);
 
   // Connect to socket on component mount
   useEffect(() => {
@@ -256,6 +273,26 @@ const Game = () => {
     newSocket.on('hostStatus', (status) => {
       console.log('Received host status:', status);
       setIsHost(status.isHost);
+    });
+
+    newSocket.on('cardPlayed', ({ playerName, cardInfo }) => {
+      console.log(`${playerName} played a card:`, cardInfo);
+      setPlayedCards(prev => [...prev, { playerName, cardInfo, timestamp: Date.now() }]);
+    });
+    
+    newSocket.on('pointsAwarded', ({ playerName, points, round }) => {
+      console.log(`${playerName} scored ${points} points in round ${round}`);
+      // Show animation for points
+      setPointsAnimation({
+        playerName,
+        points,
+        timestamp: Date.now()
+      });
+      
+      // Clear animation after 2 seconds
+      setTimeout(() => {
+        setPointsAnimation(null);
+      }, 2000);
     });
 
     newSocket.on('error', (errorMsg) => {
@@ -566,8 +603,11 @@ const Game = () => {
             {gameState.currentCockroach && (
               <div className="current-cockroach">
                 <h3>Current Card</h3>
-                <div className={`card ${gameState.currentCockroach.type === 'cockroach' ? 
-                  `cockroach-card ${gameState.currentCockroach.color}-card` : 'dummy-card'}`}>
+                <div 
+                  className={`card ${gameState.currentCockroach.type === 'cockroach' ? 
+                    `cockroach-card ${gameState.currentCockroach.color}-card` : 'dummy-card'}`}
+                  onClick={gameState.showDiscardPrompt ? discardCurrentCard : undefined}
+                >
                   {gameState.currentCockroach.type === 'dummy' ? (
                     <div className="dummy-card-content">
                       <div className="card-image">
@@ -588,6 +628,12 @@ const Game = () => {
                       </div>
                     </>
                   )}
+                  
+                  {gameState.showDiscardPrompt && (
+                    <div className="discard-prompt">
+                      Click to discard
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -598,6 +644,32 @@ const Game = () => {
               </div>
             )}
           </div>
+
+          {/* Display played cards */}
+          {playedCards.length > 0 && (
+            <div className="played-cards">
+              <h4>Played Cards:</h4>
+              <div className="played-cards-container">
+                {playedCards.map((play, index) => (
+                  <div key={index} className="played-card">
+                    <div className={`mini-card chappal-${play.cardInfo.playedColor === 'dark' ? 'dark' : 'white'}`}>
+                      <div className="mini-card-value">{play.cardInfo.value}</div>
+                    </div>
+                    <div className="played-by">{play.playerName}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Points animation */}
+          {pointsAnimation && (
+            <div className="points-animation">
+              <div className="points-text">
+                {pointsAnimation.playerName}: +{pointsAnimation.points} points!
+              </div>
+            </div>
+          )}
 
           {/* Player's hand */}
           <div className="player-hand">
@@ -950,6 +1022,113 @@ const Game = () => {
           margin-top: 20px;
           font-style: italic;
           color: #666;
+        }
+
+        /* Discard prompt styles */
+        .discard-prompt {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(0, 0, 0, 0.7);
+          color: white;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          border-radius: 12px;
+          font-weight: bold;
+          animation: pulse 1s infinite;
+          pointer-events: none;
+        }
+        
+        /* Played cards styles */
+        .played-cards {
+          margin-top: 15px;
+          text-align: center;
+        }
+        
+        .played-cards h4 {
+          margin-bottom: 10px;
+        }
+        
+        .played-cards-container {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        
+        .played-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        
+        .mini-card {
+          width: 60px;
+          height: 90px;
+          border-radius: 8px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-bottom: 5px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mini-card-value {
+          font-size: 18px;
+          font-weight: bold;
+          background-color: rgba(255, 255, 255, 0.2);
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .chappal-white {
+          background: linear-gradient(145deg, #4682B4, #5F9EA0);
+          color: white;
+        }
+        
+        .chappal-dark {
+          background: linear-gradient(145deg, #5D4037, #795548);
+          color: white;
+        }
+        
+        .played-by {
+          font-size: 12px;
+          font-weight: bold;
+        }
+        
+        /* Points animation */
+        .points-animation {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 1000;
+          pointer-events: none;
+        }
+        
+        .points-text {
+          background-color: #4CAF50;
+          color: white;
+          padding: 15px 25px;
+          border-radius: 10px;
+          font-size: 24px;
+          font-weight: bold;
+          animation: pointsAppear 2s ease-out;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes pointsAppear {
+          0% { transform: scale(0.5); opacity: 0; }
+          20% { transform: scale(1.2); opacity: 1; }
+          80% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(0.8); opacity: 0; }
         }
       `}</style>
     </div>
