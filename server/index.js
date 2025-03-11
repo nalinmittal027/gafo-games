@@ -810,3 +810,13 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// In your server/index.js file
+const PORT = process.env.PORT || 3001;
+
+// Make sure you have correct logging
+console.log(`Attempting to start server on port ${PORT}...`);
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
