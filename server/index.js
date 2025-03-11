@@ -594,127 +594,133 @@ io.on('connection', (socket) => {
     if (!game || !game.started || game.gameOver || game.waitingForNextRound) {
       return;
     }
-
+  
     const player = game.players.find(p => p.name === playerName);
     if (!player || player.id !== socket.id) {
       return;
     }
-
+  
     if (cardIndex < 0 || cardIndex >= player.chappalCards.length) {
       return;
     }
-
+  
     const chappalCard = player.chappalCards[cardIndex];
     const cockroachCard = game.currentCockroach;
-
+  
     // Exit if there's no cockroach card or we're waiting for next card
     if (!cockroachCard || game.waitingForNextCard) {
       return;
     }
-
+  
     // Set the card color based on the flip state
     const chappalColor = isFlipped ? 'dark' : 'white';
-
+  
     // Remove the played chappal card from the player's hand
     player.chappalCards.splice(cardIndex, 1);
-
+  
     // Ensure playedCards array exists in game state
     if (!Array.isArray(game.playedCards)) {
       game.playedCards = [];
     }
-
-    // Add this card to played cards with player info
+  
+    // Check if the card follows the rules - BUG FIX #2: No color restriction yet
+    let isValid = false;
+    const colorsMatch = cockroachCard.type === 'dummy' || cockroachCard.color === chappalColor;
+    
+    // Check if the play is valid based on current round rules and color
+    if (cockroachCard.type === 'dummy') {
+      // Dummy cards don't have a value check
+      isValid = true;
+      // Send feedback to the player
+      socket.emit('cardFeedback', {
+        message: 'Dummy card! No points but card discarded',
+        type: 'info'
+      });
+    } else if (colorsMatch) {
+      // Check against round rules
+      if (game.currentRound === 1) {
+        // Round 1: Higher or equal rule
+        isValid = chappalCard.value >= cockroachCard.value;
+      } else if (game.currentRound === 2) {
+        // Round 2: Lower or equal rule
+        isValid = chappalCard.value <= cockroachCard.value;
+      } else if (game.currentRound === 3) {
+        // Round 3: Mixed rules
+        if (chappalColor === 'white') {
+          // White chappal: Higher or equal rule
+          isValid = chappalCard.value >= cockroachCard.value;
+        } else {
+          // Dark chappal: Lower or equal rule
+          isValid = chappalCard.value <= cockroachCard.value;
+        }
+      }
+      
+      // Send feedback based on validity
+      if (isValid) {
+        socket.emit('cardFeedback', {
+          message: 'Correct card!',
+          type: 'success'
+        });
+      } else {
+        socket.emit('cardFeedback', {
+          message: 'Wrong card! Value doesn\'t match rule',
+          type: 'error'
+        });
+      }
+    } else {
+      // Color doesn't match
+      socket.emit('cardFeedback', {
+        message: 'Wrong color chappal!',
+        type: 'error'
+      });
+    }
+  
+    // Add this card to played cards with validity info
     game.playedCards.push({
       playerName: playerName,
       chappalCard: { ...chappalCard, playedColor: chappalColor },
+      isValid: isValid && colorsMatch,
       timestamp: Date.now()
     });
-
+  
     // Notify all players about the played card
     io.to(trimmedId).emit('cardPlayed', {
       playerName: playerName,
       cardInfo: { ...chappalCard, playedColor: chappalColor }
     });
-
+  
     // Update player's hand
     io.to(player.id).emit('currentPlayer', player);
-
+  
     // BUG FIX #1: Process all played cards if this is the first one played
     // This handles multiple players playing cards simultaneously
     if (game.playedCards.length === 1) {
       // Start a short timer to collect other potential played cards
       setTimeout(() => {
         processPlayedCards(game, trimmedId);
-      }, 300); // 300ms delay to collect nearly simultaneous plays
+      }, 500); // Increased to 500ms to allow more time for simultaneous plays
     }
-
+  
     // Update player list for everyone to show new card counts
     io.to(trimmedId).emit('playerList', game.players);
   });
-
-  // Add a new socket handler for discarding current card (Bug fix #3)
-  socket.on('discardCurrentCard', ({ gameId }) => {
-    // Normalize game ID
-    const trimmedId = gameId.trim().toUpperCase();
-    const game = games[trimmedId];
-    
-    if (!game || !game.started || game.gameOver || game.waitingForNextRound) {
-      return;
-    }
-
-    // Only discard if we have a current cockroach and we're not waiting for next card
-    if (game.currentCockroach && !game.waitingForNextCard) {
-      // Clear any played cards
-      game.playedCards = [];
-      
-      // Ensure discardPile is initialized
-      if (!Array.isArray(game.discardPile)) {
-        game.discardPile = [];
-      }
-      
-      // Add current card to discard pile
-      game.discardPile.push(game.currentCockroach);
-      console.log(`Game ${trimmedId}: Card discarded by player action`);
-      
-      // Clear current cockroach and set waiting for next card
-      game.currentCockroach = null;
-      game.waitingForNextCard = true;
-      
-      // Reset the timer for next card
-      clearTimeout(game.cardTimer);
-      
-      // Send updated game state to all players
-      io.to(trimmedId).emit('gameState', {
-        started: game.started,
-        cockroachDeck: game.cockroachDeck.length,
-        currentCockroach: null,
-        discardPile: game.discardPile.length,
-        scores: game.scores,
-        roundScores: game.roundScores,
-        currentRound: game.currentRound,
-        waitingForNextCard: true,
-        waitingForNextRound: false,
-        gameOver: game.gameOver,
-        showDiscardPrompt: false
-      });
-    }
-  });
-
-  // Helper function to process all played cards
+  
+  // Update the processPlayedCards function to provide better feedback
   function processPlayedCards(game, gameId) {
     // If no cards were played or no current cockroach, exit
     if (!game.playedCards.length || !game.currentCockroach) {
       return;
     }
-
+  
     // Ensure discardPile is initialized
     if (!Array.isArray(game.discardPile)) {
       game.discardPile = [];
     }
-
+  
     // Get the cockroach card
     const cockroachCard = game.currentCockroach;
     let pointsAwarded = false;
+    let pointWinner = null;
     
     if (cockroachCard.type === 'dummy') {
       // For dummy cards: Players lose their chappal cards but get no points
@@ -734,63 +740,52 @@ io.on('connection', (socket) => {
       // Sort played cards by timestamp to respect order they were played
       game.playedCards.sort((a, b) => a.timestamp - b.timestamp);
       
-      // Check each played card against rules
-      for (const playedCard of game.playedCards) {
-        const chappalCard = playedCard.chappalCard;
-        const chappalColor = chappalCard.playedColor;
-        const playerName = playedCard.playerName;
+      // Get valid plays first
+      const validPlays = game.playedCards.filter(play => play.isValid);
+      
+      // If we have valid plays, award points to the first one
+      if (validPlays.length > 0) {
+        const firstValidPlay = validPlays[0];
+        const playerName = firstValidPlay.playerName;
+        const pointsScored = cockroachCard.value;
         
-        // Add the chappal card to discard pile
-        game.discardPile.push(chappalCard);
+        // Award points to first valid play
+        game.scores[playerName] += pointsScored;
         
-        // Check if colors match (for regular cockroach) - BUG FIX #2
-        // We process all cards regardless of color match, but only award points for correct color
-        const colorsMatch = cockroachCard.color === chappalColor;
+        // Update round scores
+        game.roundScores[playerName][game.currentRound - 1] += pointsScored;
         
-        // Only award points if colors match
-        if (colorsMatch) {
-          let success = false;
-          
-          // Check if the play is successful based on round rules
-          if (game.currentRound === 1) {
-            // Round 1: Higher or equal rule
-            success = chappalCard.value >= cockroachCard.value;
-          } else if (game.currentRound === 2) {
-            // Round 2: Lower or equal rule
-            success = chappalCard.value <= cockroachCard.value;
-          } else if (game.currentRound === 3) {
-            // Round 3: Mixed rules
-            if (chappalColor === 'white') {
-              // White chappal: Higher or equal rule
-              success = chappalCard.value >= cockroachCard.value;
-            } else {
-              // Dark chappal: Lower or equal rule
-              success = chappalCard.value <= cockroachCard.value;
-            }
-          }
-          
-          if (success && !pointsAwarded) {
-            // First successful play gets the points
-            const pointsScored = cockroachCard.value;
-            game.scores[playerName] += pointsScored;
-            
-            // Update round scores
-            game.roundScores[playerName][game.currentRound - 1] += pointsScored;
-            
-            console.log(`${playerName} scored ${pointsScored} points in round ${game.currentRound}!`);
-            
-            // Notify all clients about the point award
-            io.to(gameId).emit('pointsAwarded', {
-              playerName,
-              points: pointsScored,
-              round: game.currentRound
+        console.log(`${playerName} scored ${pointsScored} points in round ${game.currentRound}!`);
+        
+        // Set point winner for feedback
+        pointWinner = playerName;
+        
+        // Notify all clients about the point award
+        io.to(gameId).emit('pointsAwarded', {
+          playerName,
+          points: pointsScored,
+          round: game.currentRound
+        });
+        
+        // Notify other valid players that they were too late
+        validPlays.slice(1).forEach(play => {
+          const playerSocket = game.players.find(p => p.name === play.playerName)?.id;
+          if (playerSocket) {
+            io.to(playerSocket).emit('cardFeedback', {
+              message: 'Correct card but too late!',
+              type: 'info'
             });
-            
-            // Flag that points have been awarded
-            pointsAwarded = true;
           }
-        }
+        });
+        
+        // Flag that points have been awarded
+        pointsAwarded = true;
       }
+      
+      // Add all played chappal cards to discard pile
+      game.playedCards.forEach(playedCard => {
+        game.discardPile.push(playedCard.chappalCard);
+      });
       
       // Discard the cockroach card
       game.discardPile.push(cockroachCard);
@@ -823,7 +818,7 @@ io.on('connection', (socket) => {
         console.log(`Game ${gameId} completed after all 3 rounds`);
       }
     }
-
+  
     // Send updated game state to all players
     io.to(gameId).emit('gameState', {
       started: game.started,

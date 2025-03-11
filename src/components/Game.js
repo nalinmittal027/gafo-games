@@ -117,6 +117,7 @@ const Game = () => {
   const [reconnecting, setReconnecting] = useState(false);
   const [playedCards, setPlayedCards] = useState([]);
   const [pointsAnimation, setPointsAnimation] = useState(null);
+  const [cardFeedback, setCardFeedback] = useState(null);
 
   // Normalized gameId for consistency
   const normalizedGameId = gameId?.trim().toUpperCase();
@@ -292,6 +293,20 @@ const Game = () => {
       // Clear animation after 2 seconds
       setTimeout(() => {
         setPointsAnimation(null);
+      }, 2000);
+    });
+
+    newSocket.on('cardFeedback', ({ message, type }) => {
+      console.log(`Card feedback received: ${message} (${type})`);
+      setCardFeedback({
+        message,
+        type,
+        timestamp: Date.now()
+      });
+      
+      // Clear feedback after 2 seconds
+      setTimeout(() => {
+        setCardFeedback(null);
       }, 2000);
     });
 
@@ -629,11 +644,23 @@ const Game = () => {
                     </>
                   )}
                   
-                  {gameState.showDiscardPrompt && (
-                    <div className="discard-prompt">
-                      Click to discard
-                    </div>
-                  )}
+                 {gameState.showDiscardPrompt && (
+  <div className="discard-prompt-container">
+    <button 
+      className="discard-button"
+      onClick={discardCurrentCard}
+    >
+      Click to discard
+    </button>
+  </div>
+)}
+
+{/* display card feedback to the player */}
+{cardFeedback && (
+  <div className={`card-feedback ${cardFeedback.type}`}>
+    {cardFeedback.message}
+  </div>
+)}
                 </div>
               </div>
             )}
@@ -1124,6 +1151,62 @@ const Game = () => {
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         
+  .discard-prompt-container {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+  
+  .discard-button {
+    background-color: #ff5722;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    animation: pulse 1s infinite;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+  }
+  
+  /* Card feedback styles */
+  .card-feedback {
+    position: fixed;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    color: white;
+    z-index: 1000;
+    text-align: center;
+    animation: fadeInOut 2s ease-in-out;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .card-feedback.success {
+    background-color: #4CAF50;
+  }
+  
+  .card-feedback.error {
+    background-color: #f44336;
+  }
+  
+  .card-feedback.info {
+    background-color: #2196F3;
+  }
+  
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, -10px); }
+    10% { opacity: 1; transform: translate(-50%, 0); }
+    80% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, 10px); }
+  }
+
         @keyframes pointsAppear {
           0% { transform: scale(0.5); opacity: 0; }
           20% { transform: scale(1.2); opacity: 1; }
