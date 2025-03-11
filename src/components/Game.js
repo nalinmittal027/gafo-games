@@ -307,7 +307,7 @@ const Game = () => {
       // Clear feedback after 2 seconds
       setTimeout(() => {
         setCardFeedback(null);
-      }, 2000);
+      }, 2500);
     });
 
     newSocket.on('error', (errorMsg) => {
@@ -644,16 +644,22 @@ const Game = () => {
                     </>
                   )}
                   
-                 {gameState.showDiscardPrompt && (
-  <div className="discard-prompt-container">
-    <button 
-      className="discard-button"
-      onClick={discardCurrentCard}
-    >
-      Click to discard
-    </button>
-  </div>
-)}
+                  {gameState.showDiscardPrompt && (
+        <div className="discard-prompt">
+          Click to discard
+        </div>
+      )}
+
+{gameState.showDiscardPrompt && (
+      <div className="discard-button-container">
+        <button 
+          className="discard-button"
+          onClick={discardCurrentCard}
+        >
+          Click to discard card
+        </button>
+      </div>
+    )}
 
 {/* display card feedback to the player */}
 {cardFeedback && (
@@ -1069,6 +1075,35 @@ const Game = () => {
           pointer-events: none;
         }
         
+          /* Discard button styles */
+  .discard-button-container {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+
+    .discard-button {
+    background-color: #ff5722;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    animation: pulse 1s infinite;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+  }
+  
+  /* Make the card more obviously clickable when discardable */
+  .card.cockroach-card:hover, .card.dummy-card:hover {
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    transform: translateY(-5px);
+  }
+    
         /* Played cards styles */
         .played-cards {
           margin-top: 15px;
