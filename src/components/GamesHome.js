@@ -30,30 +30,66 @@ const GamesHome = () => {
     };
   }, []);
 
-  // Array of available games
-  const games = [
+  // Array of game categories
+  const gameCategories = [
     {
-      id: 'chappal-vs-cockroach',
-      name: 'Chappal vs Cockroach',
-      description: 'Battle cockroaches with your chappal in this exciting card game!',
-      thumbnail: '/images/chappal-vs-cockroach.jpg',
-      route: '/chappal-home'
+      id: 'multiplayer',
+      name: 'Multiplayer Games',
+      games: [
+        {
+          id: 'chappal-vs-cockroach',
+          name: 'Chappal vs Cockroach',
+          description: 'Battle cockroaches with your chappal in this exciting card game!',
+          thumbnail: '/images/chappal-vs-cockroach.jpg',
+          route: '/chappal-home'
+        },
+        {
+          id: 'multiplayer-coming-soon-1',
+          name: 'Coming Soon',
+          description: 'A new multiplayer experience is on the way!',
+          thumbnail: '/images/coming-soon.jpg',
+          route: '#',
+          disabled: true
+        },
+        {
+          id: 'multiplayer-coming-soon-2',
+          name: 'Coming Soon',
+          description: 'Another thrilling multiplayer game in development!',
+          thumbnail: '/images/coming-soon.jpg',
+          route: '#',
+          disabled: true
+        }
+      ]
     },
     {
-      id: 'coming-soon-1',
-      name: 'Coming Soon',
-      description: 'A new exciting game is in development!',
-      thumbnail: '/images/coming-soon.jpg',
-      route: '#',
-      disabled: true
-    },
-    {
-      id: 'coming-soon-2',
-      name: 'Coming Soon',
-      description: 'Another thrilling game experience on the way!',
-      thumbnail: '/images/coming-soon.jpg',
-      route: '#',
-      disabled: true
+      id: 'singleplayer',
+      name: 'Single Player Games',
+      games: [
+        {
+          id: 'grid-lock',
+          name: 'Grid Lock',
+          description: 'Solve the word puzzle by filling in missing letters based on numerical sums and constraints.',
+          thumbnail: '/images/grid-lock.jpg',
+          route: '/grid-lock',
+          disabled: false
+        },
+        {
+          id: 'singleplayer-coming-soon-1',
+          name: 'Coming Soon',
+          description: 'A new brain-teasing solo challenge is in development!',
+          thumbnail: '/images/coming-soon.jpg',
+          route: '#',
+          disabled: true
+        },
+        {
+          id: 'singleplayer-coming-soon-2',
+          name: 'Coming Soon',
+          description: 'Get ready for another immersive single-player experience!',
+          thumbnail: '/images/coming-soon.jpg',
+          route: '#',
+          disabled: true
+        }
+      ]
     }
   ];
 
@@ -72,36 +108,40 @@ const GamesHome = () => {
 
       {/* Games section */}
       <section className="games-section" ref={gamesSectionRef}>
-        <h2 className="section-title">Our Games</h2>
-        <div className="games-grid">
-          {games.map((game) => (
-            <Link 
-              to={game.route} 
-              key={game.id}
-              className={`game-card ${game.disabled ? 'disabled' : ''}`}
-              onClick={(e) => game.disabled && e.preventDefault()}
-            >
-              <div className="game-thumbnail">
-                <img 
-                  src={game.thumbnail} 
-                  alt={game.name} 
-                  onError={(e) => {
-                    // Fallback for missing images
-                    e.target.src = '/images/default-game.jpg';
-                    e.target.onerror = null;
-                  }} 
-                />
-              </div>
-              <div className="game-info">
-                <h3 className="game-title">{game.name}</h3>
-                <p className="game-description">{game.description}</p>
-                <div className="game-cta">
-                  {game.disabled ? 'Coming Soon' : 'Play Now'}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {gameCategories.map((category) => (
+          <div key={category.id} className="game-category">
+            <h2 className="category-title">{category.name}</h2>
+            <div className="games-grid">
+              {category.games.map((game) => (
+                <Link 
+                  to={game.route} 
+                  key={game.id}
+                  className={`game-card ${game.disabled ? 'disabled' : ''}`}
+                  onClick={(e) => game.disabled && e.preventDefault()}
+                >
+                  <div className="game-thumbnail">
+                    <img 
+                      src={game.thumbnail} 
+                      alt={game.name} 
+                      onError={(e) => {
+                        // Fallback for missing images
+                        e.target.src = '/images/default-game.jpg';
+                        e.target.onerror = null;
+                      }} 
+                    />
+                  </div>
+                  <div className="game-info">
+                    <h3 className="game-title">{game.name}</h3>
+                    <p className="game-description">{game.description}</p>
+                    <div className="game-cta">
+                      {game.disabled ? 'Coming Soon' : 'Play Now'}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       <footer className="games-home-footer">

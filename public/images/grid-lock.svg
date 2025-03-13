@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- Dark Background -->
+  <rect width="400" height="300" fill="#121212" />
+  
+  <!-- Grid Background -->
+  <rect x="50" y="50" width="300" height="200" rx="5" ry="5" fill="#1a1a1a" stroke="#333" stroke-width="2" />
+  
+  <!-- Grid lines -->
+  <line x1="150" y1="50" x2="150" y2="250" stroke="#333" stroke-width="2" />
+  <line x1="250" y1="50" x2="250" y2="250" stroke="#333" stroke-width="2" />
+  <line x1="50" y1="116" x2="350" y2="116" stroke="#333" stroke-width="2" />
+  <line x1="50" y1="183" x2="350" y2="183" stroke="#333" stroke-width="2" />
+  
+  <!-- Letters in cells -->
+  <text x="100" y="83" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">C</text>
+  <text x="200" y="83" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">A</text>
+  <text x="300" y="83" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">T</text>
+  
+  <text x="100" y="150" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">D</text>
+  <text x="200" y="150" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">O</text>
+  <text x="300" y="150" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">G</text>
+  
+  <text x="100" y="217" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">P</text>
+  <text x="200" y="217" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">E</text>
+  <text x="300" y="217" font-family="Arial" font-size="30" font-weight="bold" text-anchor="middle" fill="#ffffff">N</text>
+  
+  <!-- Number overlays in corners -->
+  <circle cx="75" cy="75" r="15" fill="#3498db" />
+  <text x="75" y="80" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">2</text>
+  
+  <circle cx="325" cy="75" r="15" fill="#3498db" />
+  <text x="325" y="80" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">4</text>
+  
+  <circle cx="75" cy="217" r="15" fill="#3498db" />
+  <text x="75" y="222" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">3</text>
+  
+  <circle cx="325" cy="217" r="15" fill="#3498db" />
+  <text x="325" y="222" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="#ffffff">1</text>
+  
+  <!-- Title -->
+  <rect x="125" y="10" width="150" height="30" rx="3" ry="3" fill="#3498db" />
+  <text x="200" y="32" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle" fill="white">GRID LOCK</text>
+  
+  <!-- Row and column sums -->
+  <circle cx="30" cy="83" r="18" fill="#f44336" />
+  <text x="30" y="89" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">9</text>
+  
+  <circle cx="30" cy="150" r="18" fill="#00c853" />
+  <text x="30" y="156" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">7</text>
+  
+  <circle cx="30" cy="217" r="18" fill="#f44336" />
+  <text x="30" y="223" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">5</text>
+  
+  <circle cx="100" cy="30" r="18" fill="#00c853" />
+  <text x="100" y="36" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">8</text>
+  
+  <circle cx="200" cy="30" r="18" fill="#f44336" />
+  <text x="200" y="36" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">6</text>
+  
+  <circle cx="300" cy="30" r="18" fill="#00c853" />
+  <text x="300" y="36" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">7</text>
+</svg>

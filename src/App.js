@@ -1,9 +1,11 @@
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import GamesHome from './components/GamesHome';
 import ChappalLanding from './components/ChappalLanding';
 import Home from './components/Home';
 import Game from './components/Game';
+import GridLock from './components/GridLock/GridLock';
 import './App.css';
 
 function App() {
@@ -18,6 +20,9 @@ function App() {
           <Route path="/chappal-vs-cockroach" element={<ChappalLanding />} />
           <Route path="/chappal-home" element={<Home />} />
           <Route path="/game/:gameId" element={<Game />} />
+          
+          {/* Grid Lock Route */}
+          <Route path="/grid-lock" element={<GridLock />} />
           
           {/* Redirect any other paths to the homepage */}
           <Route path="*" element={<Navigate to="/" replace />} />
