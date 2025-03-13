@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <!-- Dark Background -->
+  <rect width="800" height="600" fill="#121212" />
+  
+  <!-- Gradient Overlay -->
+  <rect width="800" height="600" fill="url(#grid-gradient)" opacity="0.7" />
+  
+  <!-- Lock Body -->
+  <rect x="300" y="240" width="200" height="180" rx="15" ry="15" fill="#252525" stroke="#3498db" stroke-width="4" />
+  
+  <!-- Lock Shackle -->
+  <path d="M350 240 L350 180 Q400 120 450 180 L450 240" fill="none" stroke="#3498db" stroke-width="10" stroke-linecap="round" />
+  
+  <!-- Grid inside Lock -->
+  <line x1="333" y1="290" x2="467" y2="290" stroke="#555" stroke-width="2" />
+  <line x1="333" y1="340" x2="467" y2="340" stroke="#555" stroke-width="2" />
+  <line x1="333" y1="390" x2="467" y2="390" stroke="#555" stroke-width="2" />
+  
+  <line x1="367" y1="260" x2="367" y2="420" stroke="#555" stroke-width="2" />
+  <line x1="400" y1="260" x2="400" y2="420" stroke="#555" stroke-width="2" />
+  <line x1="433" y1="260" x2="433" y2="420" stroke="#555" stroke-width="2" />
+  
+  <!-- Letters in Grid -->
+  <text x="350" y="275" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#f44336">G</text>
+  <text x="400" y="275" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#3498db">R</text>
+  <text x="450" y="275" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#00c853">I</text>
+  
+  <text x="350" y="325" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#00c853">D</text>
+  <text x="400" y="325" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#f44336">L</text>
+  <text x="450" y="325" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#3498db">O</text>
+  
+  <text x="350" y="375" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#3498db">C</text>
+  <text x="400" y="375" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#00c853">K</text>
+  <text x="450" y="375" font-family="Arial" font-size="25" font-weight="bold" text-anchor="middle" fill="#f44336">!</text>
+  
+  <!-- Number indicators in corners -->
+  <circle cx="337" cy="267" r="8" fill="#3498db" />
+  <text x="337" y="271" font-family="Arial" font-size="10" font-weight="bold" text-anchor="middle" fill="white">3</text>
+  
+  <circle cx="463" cy="267" r="8" fill="#3498db" />
+  <text x="463" y="271" font-family="Arial" font-size="10" font-weight="bold" text-anchor="middle" fill="white">5</text>
+  
+  <circle cx="337" cy="383" r="8" fill="#3498db" />
+  <text x="337" y="387" font-family="Arial" font-size="10" font-weight="bold" text-anchor="middle" fill="white">2</text>
+  
+  <circle cx="463" cy="383" r="8" fill="#3498db" />
+  <text x="463" y="387" font-family="Arial" font-size="10" font-weight="bold" text-anchor="middle" fill="white">4</text>
+  
+  <!-- Title -->
+  <text x="400" y="470" font-family="Arial" font-size="50" font-weight="bold" text-anchor="middle" fill="white">GRID LOCK</text>
+  <text x="400" y="500" font-family="Arial" font-size="18" font-weight="normal" text-anchor="middle" fill="#aaa">WORD PUZZLE</text>
+  
+  <!-- Row and column sums -->
+  <circle cx="300" cy="275" r="15" fill="#f44336" />
+  <text x="300" y="280" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">12</text>
+  
+  <circle cx="300" cy="325" r="15" fill="#00c853" />
+  <text x="300" y="330" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">9</text>
+  
+  <circle cx="300" cy="375" r="15" fill="#f44336" />
+  <text x="300" y="380" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">7</text>
+  
+  <circle cx="350" cy="240" r="15" fill="#00c853" />
+  <text x="350" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">8</text>
+  
+  <circle cx="400" cy="240" r="15" fill="#f44336" />
+  <text x="400" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">11</text>
+  
+  <circle cx="450" cy="240" r="15" fill="#00c853" />
+  <text x="450" y="245" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="white">9</text>
+  
+  <!-- Background glow effects -->
+  <circle cx="400" cy="300" r="400" fill="url(#blue-glow)" opacity="0.1" />
+  
+  <!-- Gradients and Filters -->
+  <defs>
+    <linearGradient id="grid-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a" />
+      <stop offset="100%" stop-color="#121212" />
+    </linearGradient>
+    
+    <radialGradient id="blue-glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" stop-color="#3498db" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#3498db" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+</svg>

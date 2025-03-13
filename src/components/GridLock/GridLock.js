@@ -52,8 +52,10 @@ const GridLock = () => {
     }
   }, [grid, solutionRevealed]);
   
-  // Group letter values whenever letterValues changes
+  // Group letter values whenever letterValues or originalGrid changes
   useEffect(() => {
+    if (!originalGrid.length) return;
+
     const grouped = {};
     
     // Initialize groups for 0-5
@@ -61,9 +63,17 @@ const GridLock = () => {
       grouped[i] = [];
     }
     
-    // Group letters by their values
+    // Get only the letters used in the grid
+    const usedLetters = new Set();
+    originalGrid.forEach(row => {
+      row.forEach(letter => {
+        usedLetters.add(letter);
+      });
+    });
+    
+    // Group used letters by their values
     Object.entries(letterValues).forEach(([letter, value]) => {
-      if (grouped[value]) {
+      if (grouped[value] && usedLetters.has(letter)) {
         grouped[value].push(letter);
       }
     });
@@ -74,7 +84,7 @@ const GridLock = () => {
     }
     
     setGroupedLetterValues(grouped);
-  }, [letterValues]);
+  }, [letterValues, originalGrid]);
   
   // Generate a new game
   const generateNewGame = (size) => {
