@@ -1,9 +1,12 @@
 /* src/components/GamesHome.css */
+/* Import Quicksand font */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap');
+
 .games-home-container {
   max-width: 100%;
   width: 100%;
   margin: 0 auto;
-  font-family: 'Arial', sans-serif;
+  font-family: 'Quicksand', sans-serif; /* Change main font to Quicksand */
   overflow-x: hidden;
 }
 
@@ -26,6 +29,27 @@
   letter-spacing: 10px;
   margin: 0;
   text-align: center;
+  /* Add glow effect */
+  text-shadow: 0 0 10px rgba(42, 54, 164, 0.3),
+               0 0 20px rgba(42, 54, 164, 0.2),
+               0 0 30px rgba(42, 54, 164, 0.1),
+               0 0 40px rgba(42, 54, 164, 0.05);
+  animation: pulse-glow 3s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  from {
+    text-shadow: 0 0 10px rgba(42, 54, 164, 0.3),
+                 0 0 20px rgba(42, 54, 164, 0.2),
+                 0 0 30px rgba(42, 54, 164, 0.1),
+                 0 0 40px rgba(42, 54, 164, 0.05);
+  }
+  to {
+    text-shadow: 0 0 15px rgba(42, 54, 164, 0.4),
+                 0 0 30px rgba(42, 54, 164, 0.3),
+                 0 0 45px rgba(42, 54, 164, 0.2),
+                 0 0 60px rgba(42, 54, 164, 0.1);
+  }
 }
 
 .gafo-tagline {
@@ -78,6 +102,7 @@
   font-size: 2.2rem;
   color: #333;
   position: relative;
+  font-weight: 600; /* Adjusted weight for Quicksand */
 }
 
 .section-title:after {
@@ -152,6 +177,7 @@
   margin: 0 0 10px 0;
   font-size: 1.5rem;
   color: #333;
+  font-weight: 600; /* Adjusted weight for Quicksand */
 }
 
 .game-description {
@@ -168,7 +194,7 @@
   text-align: center;
   padding: 10px;
   border-radius: 8px;
-  font-weight: bold;
+  font-weight: 600; /* Adjusted weight for Quicksand */
   margin-top: auto;
   transition: background-color 0.3s;
 }

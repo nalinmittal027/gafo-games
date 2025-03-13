@@ -1,5 +1,5 @@
 // src/components/GamesHome.js
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './GamesHome.css';
 
@@ -13,6 +13,22 @@ const GamesHome = () => {
       behavior: 'smooth' 
     });
   };
+
+  // Add Quicksand font to the document head
+  useEffect(() => {
+    // Create link element for Quicksand font
+    const link = document.createElement('link');
+    link.href = 'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap';
+    link.rel = 'stylesheet';
+    
+    // Add to head
+    document.head.appendChild(link);
+    
+    // Clean up
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
 
   // Array of available games
   const games = [
