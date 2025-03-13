@@ -69,7 +69,7 @@ const GamesHome = () => {
           id: 'grid-lock',
           name: 'Grid Lock',
           description: 'Solve the word puzzle by filling in missing letters based on numerical sums and constraints.',
-          thumbnail: '/images/grid-lock-thumbnail.jpg', // Use this exact path
+          thumbnail: '/images/grid-lock-thumbnail.jpg',
           route: '/grid-lock',
           disabled: false
         },
@@ -147,10 +147,10 @@ const GamesHome = () => {
       <footer className="games-home-footer">
         <p>&copy; {new Date().getFullYear()} Gafo.Games. All rights reserved.</p>
         <div className="footer-links">
-          <a href="#">About Us</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
-          <a href="#">Contact</a>
+          <a href="/about">About Us</a>
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+          <a href="/contact">Contact</a>
         </div>
       </footer>
     </div>
