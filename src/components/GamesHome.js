@@ -41,7 +41,7 @@ const GamesHome = () => {
           name: 'Chappal vs Cockroach',
           description: 'Battle cockroaches with your chappal in this exciting card game!',
           thumbnail: '/images/chappal-vs-cockroach.jpg',
-          route: '/chappal-home'
+          route: '/chappal-vs-cockroach'
         },
         {
           id: 'multiplayer-coming-soon-1',
