@@ -35,8 +35,8 @@ const GamesHome = () => {
     <div className="games-home-container">
       <header className="games-home-header">
         <div className="logo-container">
-          <h1>Gafo.Games</h1>
-          <p className="tagline">Play, Connect, Have Fun!</p>
+          <h1>GAFO</h1>
+          <p className="tagline">Games are forever</p>
         </div>
       </header>
 

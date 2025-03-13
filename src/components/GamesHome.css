@@ -10,9 +10,9 @@
     text-align: center;
     margin-bottom: 50px;
     padding: 30px 0;
-    background: linear-gradient(135deg, #ff5722, #ff9800);
+    background: linear-gradient(135deg, #fcfbfb, #c8c8c7);
     border-radius: 15px;
-    color: white;
+    color: rgb(51, 45, 234);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   }
   
