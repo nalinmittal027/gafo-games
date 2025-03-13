@@ -501,3 +501,45 @@ body {
     font-size: 0.8rem;
   }
 }
+
+/* Add these styles to src/components/GridLock/GridLock.css */
+
+.grid-cell.valid-column {
+  border-bottom-color: var(--accent-color);
+  border-bottom-width: 2px;
+}
+
+.col-indicators {
+  display: flex;
+  margin-top: 5px;
+}
+
+.col-indicator {
+  width: 45px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 3px;
+  color: var(--accent-color);
+  font-size: 1.2rem;
+  visibility: hidden;
+}
+
+.col-indicator.visible {
+  visibility: visible;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+  100% { opacity: 0.6; transform: translateY(0); }
+}
+
+/* Also add a style for the game instructions to mention the valid column */
+.valid-column-note {
+  margin-top: 10px;
+  font-style: italic;
+  color: var(--accent-color);
+}

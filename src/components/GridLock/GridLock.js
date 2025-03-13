@@ -27,6 +27,292 @@ const GridLock = () => {
   const [attempts, setAttempts] = useState(0);
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [groupedLetterValues, setGroupedLetterValues] = useState({});
+  const [validColumnIndex, setValidColumnIndex] = useState(0);
+  
+  // Generate a valid grid with valid words (rows only)
+  const generateValidGrid = (size) => {
+    const validGrid = [];
+    const availableWords = [...wordDictionaries[size]];
+    
+    // Select random words for each row
+    for (let i = 0; i < size; i++) {
+      // Get a random word for this row
+      const randomIndex = Math.floor(Math.random() * availableWords.length);
+      const word = availableWords[randomIndex].toLowerCase();
+      
+      // Remove the word from available words
+      availableWords.splice(randomIndex, 1);
+      
+      // Add the word to the grid
+      const row = word.split('');
+      validGrid.push(row);
+    }
+    
+    return validGrid;
+  };
+  
+  // Generate a valid grid with valid rows and at least one valid column
+  const generateValidGridWithColumns = (size) => {
+    // First generate a grid with valid rows
+    const validGrid = generateValidGrid(size);
+    
+    // Check if any column is already a valid word
+    let validColumnIndex = -1;
+    
+    for (let j = 0; j < size; j++) {
+      const column = [];
+      for (let i = 0; i < size; i++) {
+        column.push(validGrid[i][j]);
+      }
+      
+      const columnWord = column.join('');
+      if (wordDictionaries[size].includes(columnWord)) {
+        validColumnIndex = j;
+        break;
+      }
+    }
+    
+    // If we already have a valid column, return the grid and valid column index
+    if (validColumnIndex !== -1) {
+      return { grid: validGrid, validColumnIndex };
+    }
+    
+    // Try to make one column valid by regenerating the grid up to several attempts
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    while (attempts < maxAttempts) {
+      const newGrid = generateValidGrid(size);
+      
+      // Check each column for a valid word
+      for (let j = 0; j < size; j++) {
+        const column = [];
+        for (let i = 0; i < size; i++) {
+          column.push(newGrid[i][j]);
+        }
+        
+        const columnWord = column.join('');
+        if (wordDictionaries[size].includes(columnWord)) {
+          return { grid: newGrid, validColumnIndex: j };
+        }
+      }
+      
+      attempts++;
+    }
+    
+    // If we can't find a grid with a valid column, try to modify one column to make it valid
+    for (let j = 0; j < size; j++) {
+      // Start with our initial valid grid
+      const modifiedGrid = JSON.parse(JSON.stringify(validGrid));
+      const availableWords = [...wordDictionaries[size]];
+      
+      // Try to find a word that can be placed vertically with minimal changes
+      const potentialWords = availableWords.filter(word => word.length === size);
+      
+      for (const word of potentialWords) {
+        // Check if this word can fit in the column with minimal changes
+        let changesNeeded = 0;
+        
+        for (let i = 0; i < size; i++) {
+          if (word[i] !== modifiedGrid[i][j]) {
+            changesNeeded++;
+          }
+        }
+        
+        // If less than half the letters need changing, try to use this word
+        if (changesNeeded <= Math.floor(size / 2)) {
+          // Try to update the rows to accommodate this column
+          let canUpdate = true;
+          
+          for (let i = 0; i < size; i++) {
+            if (word[i] !== modifiedGrid[i][j]) {
+              // Change this letter in the row
+              const newRow = modifiedGrid[i].slice();
+              newRow[j] = word[i];
+              const newRowWord = newRow.join('');
+              
+              // Check if the new row is still a valid word
+              if (wordDictionaries[size].includes(newRowWord)) {
+                modifiedGrid[i] = newRow;
+              } else {
+                canUpdate = false;
+                break;
+              }
+            }
+          }
+          
+          if (canUpdate) {
+            return { grid: modifiedGrid, validColumnIndex: j };
+          }
+        }
+      }
+    }
+    
+    // If all else fails, just return the original grid and mark the first column
+    // This is a fallback and shouldn't happen often
+    console.log("Could not generate grid with valid column. Using fallback.");
+    return { grid: validGrid, validColumnIndex: 0 };
+  };
+  
+  // Calculate row sums
+  const calculateRowSums = (grid, values) => {
+    return grid.map(row => {
+      return row.reduce((sum, letter) => sum + values[letter], 0);
+    });
+  };
+  
+  // Calculate column sums
+  const calculateColumnSums = (grid, values) => {
+    const sums = [];
+    for (let j = 0; j < grid[0].length; j++) {
+      let sum = 0;
+      for (let i = 0; i < grid.length; i++) {
+        sum += values[grid[i][j]];
+      }
+      sums.push(sum);
+    }
+    return sums;
+  };
+  
+  // Calculate if row totals match expected values
+  const calculateRowMatches = () => {
+    return rowSums.map((expectedSum, rowIndex) => {
+      const currentSum = grid[rowIndex].reduce((sum, cell) => {
+        return sum + (cell.letter ? letterValues[cell.letter] || 0 : 0);
+      }, 0);
+      return currentSum === expectedSum;
+    });
+  };
+  
+  // Calculate if column totals match expected values
+  const calculateColumnMatches = () => {
+    return colSums.map((expectedSum, colIndex) => {
+      let currentSum = 0;
+      for (let i = 0; i < grid.length; i++) {
+        currentSum += grid[i][colIndex].letter ? letterValues[grid[i][colIndex].letter] || 0 : 0;
+      }
+      return currentSum === expectedSum;
+    });
+  };
+  
+  // Generate a new game
+  const generateNewGame = (size) => {
+    const newGridSize = size || gridSize;
+    
+    // Generate grid with valid rows and at least one valid column
+    const { grid: validGrid, validColumnIndex } = generateValidGridWithColumns(newGridSize);
+    setOriginalGrid(validGrid);
+    setValidColumnIndex(validColumnIndex);
+    
+    // Assign random values to each letter
+    const values = {};
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    for (let i = 0; i < alphabet.length; i++) {
+      values[alphabet[i]] = Math.floor(Math.random() * 6); // 0-5
+    }
+    setLetterValues(values);
+    
+    // Calculate row and column sums
+    const rSums = calculateRowSums(validGrid, values);
+    const cSums = calculateColumnSums(validGrid, values);
+    setRowSums(rSums);
+    setColSums(cSums);
+    
+    // Create player grid with only top-left and bottom-right revealed
+    const playerGrid = [];
+    for (let i = 0; i < newGridSize; i++) {
+      const row = [];
+      for (let j = 0; j < newGridSize; j++) {
+        // Reveal only top-left and bottom-right
+        if ((i === 0 && j === 0) || (i === newGridSize - 1 && j === newGridSize - 1)) {
+          row.push({ letter: validGrid[i][j], revealed: true });
+        } else {
+          row.push({ letter: '', revealed: false });
+        }
+      }
+      playerGrid.push(row);
+    }
+    
+    setGrid(playerGrid);
+    setGameWon(false);
+    setSolutionRevealed(false);
+    setAttempts(0);
+    setRowMatches(Array(newGridSize).fill(false));
+    setColMatches(Array(newGridSize).fill(false));
+  };
+  
+  // Handle cell input change
+  const handleCellChange = (rowIndex, colIndex, value) => {
+    if (grid[rowIndex][colIndex].revealed || gameWon || solutionRevealed) return;
+    
+    // Update grid with new value
+    const newGrid = [...grid];
+    newGrid[rowIndex][colIndex] = { 
+      ...newGrid[rowIndex][colIndex], 
+      letter: value.toLowerCase() 
+    };
+    setGrid(newGrid);
+    setAttempts(prev => prev + 1);
+  };
+  
+  // Restart the game
+  const restartGame = () => {
+    generateNewGame(gridSize);
+  };
+  
+  // Change grid size
+  const handleGridSizeChange = (e) => {
+    const newSize = parseInt(e.target.value);
+    setGridSize(newSize);
+    generateNewGame(newSize);
+  };
+  
+  // Take a hint - reveal a random unrevealed cell
+  const takeHint = () => {
+    if (gameWon || solutionRevealed) return;
+    
+    // Find all unrevealed cells
+    const unrevealedCells = [];
+    grid.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        if (!cell.revealed && !cell.letter) {
+          unrevealedCells.push({ rowIndex, colIndex });
+        }
+      });
+    });
+    
+    // If there are any unrevealed cells, reveal one randomly
+    if (unrevealedCells.length > 0) {
+      const randomIndex = Math.floor(Math.random() * unrevealedCells.length);
+      const { rowIndex, colIndex } = unrevealedCells[randomIndex];
+      
+      const newGrid = [...grid];
+      newGrid[rowIndex][colIndex] = { 
+        letter: originalGrid[rowIndex][colIndex], 
+        revealed: true 
+      };
+      
+      setGrid(newGrid);
+      setAttempts(prev => prev + 2); // Add 2 to attempts as penalty
+    }
+  };
+  
+  // Reveal the solution
+  const revealSolution = () => {
+    const solutionGrid = originalGrid.map((row, rowIndex) => {
+      return row.map((letter, colIndex) => {
+        const isRevealed = (rowIndex === 0 && colIndex === 0) || 
+                          (rowIndex === gridSize - 1 && colIndex === gridSize - 1);
+        return {
+          letter,
+          revealed: isRevealed
+        };
+      });
+    });
+    
+    setGrid(solutionGrid);
+    setSolutionRevealed(true);
+  };
   
   // Initialize game
   useEffect(() => {
@@ -85,229 +371,6 @@ const GridLock = () => {
     
     setGroupedLetterValues(grouped);
   }, [letterValues, originalGrid]);
-  
-  // Generate a new game
-  const generateNewGame = (size) => {
-    const newGridSize = size || gridSize;
-    
-    // Generate grid with valid rows AND valid columns
-    const validGrid = generateValidGridWithColumns(newGridSize);
-    setOriginalGrid(validGrid);
-    
-    // Assign random values to each letter
-    const values = {};
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-    for (let i = 0; i < alphabet.length; i++) {
-      values[alphabet[i]] = Math.floor(Math.random() * 6); // 0-5
-    }
-    setLetterValues(values);
-    
-    // Calculate row and column sums
-    const rSums = calculateRowSums(validGrid, values);
-    const cSums = calculateColumnSums(validGrid, values);
-    setRowSums(rSums);
-    setColSums(cSums);
-    
-    // Create player grid with only top-left and bottom-right revealed
-    const playerGrid = [];
-    for (let i = 0; i < newGridSize; i++) {
-      const row = [];
-      for (let j = 0; j < newGridSize; j++) {
-        // Reveal only top-left and bottom-right
-        if ((i === 0 && j === 0) || (i === newGridSize - 1 && j === newGridSize - 1)) {
-          row.push({ letter: validGrid[i][j], revealed: true });
-        } else {
-          row.push({ letter: '', revealed: false });
-        }
-      }
-      playerGrid.push(row);
-    }
-    
-    setGrid(playerGrid);
-    setGameWon(false);
-    setSolutionRevealed(false);
-    setAttempts(0);
-    setRowMatches(Array(newGridSize).fill(false));
-    setColMatches(Array(newGridSize).fill(false));
-  };
-  
-  // Generate a valid grid with both valid rows AND valid columns
-  const generateValidGridWithColumns = (size) => {
-    // This is a simplified approach that may not be perfect for large grids
-    // For production, you might need a more sophisticated algorithm
-    
-    // Try a limited number of times to generate a valid grid
-    let attempts = 0;
-    const maxAttempts = 100;
-    
-    while (attempts < maxAttempts) {
-      // First generate a grid with valid rows
-      const candidateGrid = generateValidGrid(size);
-      
-      // Check if columns are also valid words
-      let allColumnsValid = true;
-      
-      // Extract columns and check if they're valid words
-      for (let j = 0; j < size; j++) {
-        const column = [];
-        for (let i = 0; i < size; i++) {
-          column.push(candidateGrid[i][j]);
-        }
-        
-        const columnWord = column.join('');
-        if (!wordDictionaries[size].includes(columnWord)) {
-          allColumnsValid = false;
-          break;
-        }
-      }
-      
-      if (allColumnsValid) {
-        return candidateGrid;
-      }
-      
-      attempts++;
-    }
-    
-    // If we can't find a perfect solution, use a fallback approach
-    console.log("Couldn't find a grid with all valid columns. Using fallback grid.");
-    return generateValidGrid(size);
-  };
-  
-  // Generate a valid grid with valid words (rows only)
-  const generateValidGrid = (size) => {
-    const validGrid = [];
-    const availableWords = [...wordDictionaries[size]];
-    
-    // Select random words for each row
-    for (let i = 0; i < size; i++) {
-      // Get a random word for this row
-      const randomIndex = Math.floor(Math.random() * availableWords.length);
-      const word = availableWords[randomIndex].toLowerCase();
-      
-      // Remove the word from available words
-      availableWords.splice(randomIndex, 1);
-      
-      // Add the word to the grid
-      const row = word.split('');
-      validGrid.push(row);
-    }
-    
-    return validGrid;
-  };
-  
-  // Calculate row sums
-  const calculateRowSums = (grid, values) => {
-    return grid.map(row => {
-      return row.reduce((sum, letter) => sum + values[letter], 0);
-    });
-  };
-  
-  // Calculate column sums
-  const calculateColumnSums = (grid, values) => {
-    const sums = [];
-    for (let j = 0; j < grid[0].length; j++) {
-      let sum = 0;
-      for (let i = 0; i < grid.length; i++) {
-        sum += values[grid[i][j]];
-      }
-      sums.push(sum);
-    }
-    return sums;
-  };
-  
-  // Handle cell input change
-  const handleCellChange = (rowIndex, colIndex, value) => {
-    if (grid[rowIndex][colIndex].revealed || gameWon || solutionRevealed) return;
-    
-    // Update grid with new value
-    const newGrid = [...grid];
-    newGrid[rowIndex][colIndex] = { 
-      ...newGrid[rowIndex][colIndex], 
-      letter: value.toLowerCase() 
-    };
-    setGrid(newGrid);
-    setAttempts(prev => prev + 1);
-  };
-  
-  // Calculate if row totals match expected values
-  const calculateRowMatches = () => {
-    return rowSums.map((expectedSum, rowIndex) => {
-      const currentSum = grid[rowIndex].reduce((sum, cell) => {
-        return sum + (cell.letter ? letterValues[cell.letter] || 0 : 0);
-      }, 0);
-      return currentSum === expectedSum;
-    });
-  };
-  
-  // Calculate if column totals match expected values
-  const calculateColumnMatches = () => {
-    return colSums.map((expectedSum, colIndex) => {
-      let currentSum = 0;
-      for (let i = 0; i < grid.length; i++) {
-        currentSum += grid[i][colIndex].letter ? letterValues[grid[i][colIndex].letter] || 0 : 0;
-      }
-      return currentSum === expectedSum;
-    });
-  };
-  
-  // Restart the game
-  const restartGame = () => {
-    generateNewGame(gridSize);
-  };
-  
-  // Change grid size
-  const handleGridSizeChange = (e) => {
-    const newSize = parseInt(e.target.value);
-    setGridSize(newSize);
-    generateNewGame(newSize);
-  };
-  
-  // Take a hint - reveal a random unrevealed cell
-  const takeHint = () => {
-    if (gameWon || solutionRevealed) return;
-    
-    // Find all unrevealed cells
-    const unrevealedCells = [];
-    grid.forEach((row, rowIndex) => {
-      row.forEach((cell, colIndex) => {
-        if (!cell.revealed && !cell.letter) {
-          unrevealedCells.push({ rowIndex, colIndex });
-        }
-      });
-    });
-    
-    // If there are any unrevealed cells, reveal one randomly
-    if (unrevealedCells.length > 0) {
-      const randomIndex = Math.floor(Math.random() * unrevealedCells.length);
-      const { rowIndex, colIndex } = unrevealedCells[randomIndex];
-      
-      const newGrid = [...grid];
-      newGrid[rowIndex][colIndex] = { 
-        letter: originalGrid[rowIndex][colIndex], 
-        revealed: true 
-      };
-      
-      setGrid(newGrid);
-      setAttempts(prev => prev + 2); // Add 2 to attempts as penalty
-    }
-  };
-  
-  // Reveal the solution
-  const revealSolution = () => {
-    const solutionGrid = originalGrid.map((row, rowIndex) => {
-      return row.map((letter, colIndex) => {
-        const isRevealed = (rowIndex === 0 && colIndex === 0) || 
-                           (rowIndex === gridSize - 1 && colIndex === gridSize - 1);
-        return {
-          letter,
-          revealed: isRevealed
-        };
-      });
-    });
-    
-    setGrid(solutionGrid);
-    setSolutionRevealed(true);
-  };
 
   return (
     <div className="grid-lock-container">
@@ -396,7 +459,7 @@ const GridLock = () => {
                   {row.map((cell, colIndex) => (
                     <div 
                       key={colIndex} 
-                      className={`grid-cell ${cell.revealed ? 'revealed' : ''} ${solutionRevealed ? 'solution' : ''}`}
+                      className={`grid-cell ${cell.revealed ? 'revealed' : ''} ${solutionRevealed ? 'solution' : ''} ${colIndex === validColumnIndex ? 'valid-column' : ''}`}
                     >
                       <input
                         type="text"
@@ -417,6 +480,19 @@ const GridLock = () => {
                   ))}
                 </div>
               ))}
+
+              {/* Add column arrows below the grid */}
+              <div className="col-indicators">
+                <div className="empty-cell"></div>
+                {Array(grid[0]?.length || 0).fill(0).map((_, index) => (
+                  <div 
+                    key={index} 
+                    className={`col-indicator ${index === validColumnIndex ? 'visible' : ''}`}
+                  >
+                    {index === validColumnIndex && <span>▲</span>}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -441,12 +517,15 @@ const GridLock = () => {
       <div className="game-instructions">
         <h3>HOW TO PLAY</h3>
         <ul>
-          <li>Fill in the grid with letters to form valid words in each row AND column</li>
+          <li>Fill in the grid with letters to form valid words in each row</li>
           <li>The sum of each row and column must match the numbers shown</li>
           <li>Each letter has a numerical value (0-5) shown in the left panel</li>
           <li>Use the revealed letters in the top-left and bottom-right as clues</li>
           <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
         </ul>
+        <p className="valid-column-note">
+          <strong>Bonus:</strong> One column (marked with ▲) will also form a valid word!
+        </p>
       </div>
     </div>
   );
