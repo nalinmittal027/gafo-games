@@ -69,7 +69,7 @@ const GamesHome = () => {
           id: 'grid-lock',
           name: 'Grid Lock',
           description: 'Solve the word puzzle by filling in missing letters based on numerical sums and constraints.',
-          thumbnail: '/images/grid-lock-thumbnail.jpg',
+          thumbnail: '/images/grid-lock-thumbnail.jpg', // Use this exact path
           route: '/grid-lock',
           disabled: false
         },
