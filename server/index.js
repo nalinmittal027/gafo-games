@@ -22,6 +22,7 @@ const io = new Server(server, {
 app.get('/ping', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.send('pong');
+});
 app.get('/games/debug', (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   const gamesList = Object.keys(games).map(id => ({
@@ -33,7 +34,7 @@ app.get('/games/debug', (req, res) => {
     currentRound: games[id].currentRound,
     createdAt: new Date(games[id].created).toISOString()
   }));
-})
+
   res.json({
     totalGames: gamesList.length,
     games: gamesList,
