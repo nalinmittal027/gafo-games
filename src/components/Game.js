@@ -1,6 +1,6 @@
 // src/components/Game.js - Enhanced version with dark/white card graphics
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import io from 'socket.io-client';
 
 // Card graphics - simple ASCII art for now
@@ -463,29 +463,48 @@ const Game = () => {
     return <div className="card-value">{card.value}</div>;
   };
 
-  // Display connection status if not connected
-  if (!connected) {
-    return (
-      <div className="game-container">
-        <header className="game-header">
-          <h1>Chappal vs Cockroach</h1>
-        </header>
-        <div className="connecting-message">
-          <h2>{reconnecting ? 'Reconnecting...' : 'Connecting to game...'}</h2>
-          <p>Please wait while we connect to the game server.</p>
-          {error && <div className="error-message">{error}</div>}
-          <button onClick={() => navigate('/')} className="back-button">
-            Back to Home
+// Display connection status if not connected
+if (!connected) {
+  return (
+    <div className="game-container">
+      {/* Back to Games navigation */}
+      <div className="back-to-games">
+        <Link to="/" className="back-link">
+          &larr; Back to Games
+        </Link>
+      </div>
+      
+      <header className="game-header">
+        <h1>Chappal vs Cockroach</h1>
+      </header>
+      <div className="connecting-message">
+        <h2>{reconnecting ? 'Reconnecting...' : 'Connecting to game...'}</h2>
+        <p>Please wait while we connect to the game server.</p>
+        {error && <div className="error-message">{error}</div>}
+        <div className="button-group">
+          <button onClick={() => navigate('/chappal-home')} className="back-button">
+            Back to Chappal Home
           </button>
+          <Link to="/" className="back-button games-home">
+            Back to Games
+          </Link>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // Display error with retry option
   if (error === 'Game not found' && joinAttempted) {
     return (
       <div className="game-container">
+        {/* Back to Games navigation */}
+        <div className="back-to-games">
+          <Link to="/" className="back-link">
+            &larr; Back to Games
+          </Link>
+        </div>
+        
         <header className="game-header">
           <h1>Chappal vs Cockroach</h1>
         </header>
@@ -496,9 +515,12 @@ const Game = () => {
             <button onClick={retryJoin} className="retry-button">
               Retry Join
             </button>
-            <button onClick={() => navigate('/')} className="back-button">
-              Back to Home
+            <button onClick={() => navigate('/chappal-home')} className="back-button">
+              Back to Chappal Home
             </button>
+            <Link to="/" className="back-button games-home">
+              Back to Games
+            </Link>
           </div>
         </div>
       </div>
@@ -507,6 +529,13 @@ const Game = () => {
 
   return (
     <div className="game-container">
+      {/* Back to Games navigation */}
+      <div className="back-to-games">
+        <Link to="/" className="back-link">
+          &larr; Back to Games
+        </Link>
+      </div>
+      
       <header className="game-header">
         <h1>Chappal vs Cockroach</h1>
         <div className="game-info">
@@ -572,9 +601,14 @@ const Game = () => {
             <p>Waiting for the host to start the game...</p>
           )}
           
-          <button onClick={() => navigate('/')} className="back-button">
-            Back to Home
-          </button>
+          <div className="button-group">
+            <button onClick={() => navigate('/chappal-home')} className="back-button chappal-home">
+              Back to Chappal Home
+            </button>
+            <Link to="/" className="back-button games-home">
+              Back to Games
+            </Link>
+          </div>
         </div>
       )}
 
@@ -1083,6 +1117,47 @@ const Game = () => {
     transform: translateX(-50%);
     z-index: 10;
   }
+
+  .button-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.back-to-games {
+  text-align: left;
+  margin-bottom: 15px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  color: #666;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  transition: all 0.3s;
+  font-weight: 600;
+}
+
+.back-link:hover {
+  background-color: #f5f5f5;
+  color: #ff5722;
+  transform: translateX(-3px);
+}
+
+.back-button.chappal-home {
+  background-color: #757575;
+}
+
+.back-button.games-home {
+  background-color: #ff9800;
+  color: white;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
 
     .discard-button {
     background-color: #ff5722;

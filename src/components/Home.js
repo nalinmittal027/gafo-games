@@ -1,6 +1,6 @@
 // src/components/Home.js - Enhanced Game Creation Flow
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import io from 'socket.io-client';
 
 const Home = () => {
@@ -222,6 +222,13 @@ const Home = () => {
 
   return (
     <div className="home-container">
+      {/* Added navigation back to the games page */}
+      <div className="back-to-games">
+        <Link to="/" className="back-link">
+          &larr; Back to Games
+        </Link>
+      </div>
+      
       <h1>Chappal vs Cockroach</h1>
       
       <div className="socket-status">
@@ -313,6 +320,7 @@ const Home = () => {
       </div>
       
       <style>{`
+        /* Existing styles */
         .socket-status {
           margin: 10px 0 20px;
           font-size: 14px;
@@ -373,6 +381,41 @@ const Home = () => {
         }
         .rules-container li {
           margin-bottom: 8px;
+        }
+        
+        /* New styles for back navigation */
+        .back-to-games {
+          margin-bottom: 20px;
+          text-align: left;
+        }
+        
+        .back-link {
+          display: inline-flex;
+          align-items: center;
+          color: #666;
+          text-decoration: none;
+          padding: 8px 12px;
+          border-radius: 5px;
+          transition: all 0.3s;
+          font-weight: 600;
+        }
+        
+        .back-link:hover {
+          background-color: #f5f5f5;
+          color: #ff5722;
+          transform: translateX(-3px);
+        }
+        
+        /* Ensure responsive layout for the back button */
+        @media (max-width: 768px) {
+          .back-to-games {
+            margin-bottom: 15px;
+          }
+          
+          .back-link {
+            font-size: 0.9rem;
+            padding: 6px 10px;
+          }
         }
       `}</style>
     </div>

@@ -1,0 +1,131 @@
+/* src/components/ChappalLanding.css */
+.chappal-landing-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .game-banner {
+    background: linear-gradient(135deg, #ff5722, #ff9800);
+    padding: 60px 30px;
+    border-radius: 15px;
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+  
+  .game-banner h1 {
+    font-size: 3.5rem;
+    margin: 0;
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+  }
+  
+  .game-tagline {
+    font-size: 1.2rem;
+    margin-top: 15px;
+    opacity: 0.9;
+  }
+  
+  .game-description-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 40px;
+  }
+  
+  .game-description, .game-rules {
+    background-color: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  }
+  
+  .game-description h2, .game-rules h2 {
+    color: #ff5722;
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+  }
+  
+  .game-description p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+    color: #333;
+  }
+  
+  .game-rules h3 {
+    color: #333;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-size: 1.3rem;
+  }
+  
+  .game-rules ul {
+    padding-left: 20px;
+  }
+  
+  .game-rules li {
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  
+  .play-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 40px;
+  }
+  
+  .action-button {
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-decoration: none;
+    transition: all 0.3s;
+    text-align: center;
+  }
+  
+  .action-button.primary {
+    background-color: #ff5722;
+    color: white;
+  }
+  
+  .action-button.primary:hover {
+    background-color: #e64a19;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(230, 74, 25, 0.3);
+  }
+  
+  .action-button.secondary {
+    background-color: #f5f5f5;
+    color: #333;
+    border: 2px solid #ddd;
+  }
+  
+  .action-button.secondary:hover {
+    background-color: #eeeeee;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .game-description-section {
+      grid-template-columns: 1fr;
+    }
+    
+    .game-banner {
+      padding: 40px 20px;
+    }
+    
+    .game-banner h1 {
+      font-size: 2.5rem;
+    }
+    
+    .action-button {
+      padding: 12px 20px;
+    }
+  }
