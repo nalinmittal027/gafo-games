@@ -1,9 +1,19 @@
 // src/components/GamesHome.js
-import React from 'react';
+import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './GamesHome.css';
 
 const GamesHome = () => {
+  // Reference to the games section for smooth scrolling
+  const gamesSectionRef = useRef(null);
+  
+  // Function to scroll to games section
+  const scrollToGames = () => {
+    gamesSectionRef.current.scrollIntoView({ 
+      behavior: 'smooth' 
+    });
+  };
+
   // Array of available games
   const games = [
     {
@@ -11,7 +21,7 @@ const GamesHome = () => {
       name: 'Chappal vs Cockroach',
       description: 'Battle cockroaches with your chappal in this exciting card game!',
       thumbnail: '/images/chappal-vs-cockroach.jpg',
-      route: '/chappal-vs-cockroach'
+      route: '/chappal-home'
     },
     {
       id: 'coming-soon-1',
@@ -33,14 +43,19 @@ const GamesHome = () => {
 
   return (
     <div className="games-home-container">
-      <header className="games-home-header">
-        <div className="logo-container">
-          <h1>GAFO</h1>
-          <p className="tagline">Games are forever</p>
+      {/* Hero section with GAFO title */}
+      <section className="hero-section">
+        <h1 className="gafo-title">GAFO</h1>
+        <p className="gafo-tagline">Games are Forever</p>
+        
+        {/* Bouncing arrow */}
+        <div className="scroll-arrow-container" onClick={scrollToGames}>
+          <div className="scroll-arrow">↓</div>
         </div>
-      </header>
+      </section>
 
-      <main className="games-showcase">
+      {/* Games section */}
+      <section className="games-section" ref={gamesSectionRef}>
         <h2 className="section-title">Our Games</h2>
         <div className="games-grid">
           {games.map((game) => (
@@ -71,7 +86,7 @@ const GamesHome = () => {
             </Link>
           ))}
         </div>
-      </main>
+      </section>
 
       <footer className="games-home-footer">
         <p>&copy; {new Date().getFullYear()} Gafo.Games. All rights reserved.</p>
