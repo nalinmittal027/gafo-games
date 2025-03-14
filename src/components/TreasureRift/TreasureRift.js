@@ -1,26 +1,30 @@
 // src/components/TreasureRift/TreasureRift.js
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import './TreasureRift.css';
 
 const GRID_SIZE = 8;
+const MAX_EXPLORATIONS = 15;
 const MANHATTAN_DISTANCE = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
 
 const TreasureRift = () => {
   // Game state
   const [board, setBoard] = useState(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
   const [gameStatus, setGameStatus] = useState('playing'); // 'playing', 'won', 'lost'
-  const [message, setMessage] = useState('Find the hidden treasure while avoiding pirates!');
+  const [message, setMessage] = useState('Find the hidden treasure while conserving your explorations!');
   const [pirateEncounters, setPirateEncounters] = useState(0);
   const [elements, setElements] = useState({
     rocks: [],
     oceanCurrent: { x: 0, y: 0 },
     map: { x: 0, y: 0 },
+    compass: { orientation: 'horizontal' }, // 'horizontal' or 'vertical'
     shipWreck: { x: 0, y: 0 },
     pirates: [],
     treasure: { x: 0, y: 0 },
   });
   const [revealedCells, setRevealedCells] = useState([]);
-  const [moves, setMoves] = useState(0);
+  const [explorationsLeft, setExplorationsLeft] = useState(MAX_EXPLORATIONS);
+  const [score, setScore] = useState(0);
 
   // Initialize the game
   useEffect(() => {
@@ -31,10 +35,11 @@ const TreasureRift = () => {
     // Reset state
     setBoard(Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null)));
     setGameStatus('playing');
-    setMessage('Find the hidden treasure while avoiding pirates!');
+    setMessage('Find the hidden treasure while conserving your explorations!');
     setPirateEncounters(0);
     setRevealedCells([]);
-    setMoves(0);
+    setExplorationsLeft(MAX_EXPLORATIONS);
+    setScore(0);
 
     // Step 1: Place the shipwreck
     const shipWreck = {
@@ -42,7 +47,11 @@ const TreasureRift = () => {
       y: Math.floor(Math.random() * GRID_SIZE)
     };
 
-    // Step 2: Place three rocks
+    // Step 2: Place the compass and determine orientation
+    const compassOrientation = Math.random() > 0.5 ? 'horizontal' : 'vertical';
+    const compass = { orientation: compassOrientation };
+
+    // Step 3: Place three rocks
     const rocks = [];
     while (rocks.length < 3) {
       const rock = {
@@ -57,7 +66,7 @@ const TreasureRift = () => {
       }
     }
 
-    // Step 3: Place the ocean current
+    // Step 4: Place the ocean current
     let oceanCurrent;
     do {
       oceanCurrent = {
@@ -69,39 +78,58 @@ const TreasureRift = () => {
       rocks.some(r => r.x === oceanCurrent.x && r.y === oceanCurrent.y)
     );
 
-    // Step 4: Place the map in a random row
-    const mapRow = Math.floor(Math.random() * GRID_SIZE);
-    let mapCol;
+    // Step 5: Place the map
+    let map;
     do {
-      mapCol = Math.floor(Math.random() * GRID_SIZE);
+      map = {
+        x: Math.floor(Math.random() * GRID_SIZE),
+        y: Math.floor(Math.random() * GRID_SIZE)
+      };
     } while (
-      (mapCol === shipWreck.x && mapRow === shipWreck.y) ||
-      rocks.some(r => r.x === mapCol && r.y === mapRow) ||
-      (mapCol === oceanCurrent.x && mapRow === oceanCurrent.y)
+      (map.x === shipWreck.x && map.y === shipWreck.y) ||
+      rocks.some(r => r.x === map.x && r.y === map.y) ||
+      (map.x === oceanCurrent.x && map.y === oceanCurrent.y)
     );
-    const map = { x: mapCol, y: mapRow };
 
-    // Step 5: Determine possible treasure locations based on constraints
+    // Step 6: Determine possible treasure locations based on constraints
     const possibleTreasureLocations = [];
     
     for (let y = 0; y < GRID_SIZE; y++) {
       for (let x = 0; x < GRID_SIZE; x++) {
         // Skip if cell is occupied by another element
         if ((x === shipWreck.x && y === shipWreck.y) ||
-            rocks.some(r => r.x === x && r.y === y) ||
+            rocks.some(r => r.x === x && r.y === r.y) ||
             (x === oceanCurrent.x && y === oceanCurrent.y) ||
             (x === map.x && y === map.y)) {
           continue;
         }
 
+        // Check if the position is affected by a rock (including diagonals)
+        const isNearRock = rocks.some(rock => {
+          const dx = Math.abs(x - rock.x);
+          const dy = Math.abs(y - rock.y);
+          return dx <= 1 && dy <= 1; // This includes diagonals
+        });
+
+        if (isNearRock) {
+          continue;
+        }
+
         // Check treasure placement constraints
         const isWithinShipwreckRange = MANHATTAN_DISTANCE(x, y, shipWreck.x, shipWreck.y) <= 3;
-        const isNotAdjacentToRocks = !rocks.some(r => MANHATTAN_DISTANCE(x, y, r.x, r.y) <= 1);
         const isNotInOceanCurrentRowOrCol = x !== oceanCurrent.x && y !== oceanCurrent.y;
-        const isInMapRow = y === map.y;
+        
+        // New map constraint based on compass
+        let isInMapRange = false;
+        if (compassOrientation === 'horizontal') {
+          // Check if in map row or adjacent rows
+          isInMapRange = y >= map.y - 1 && y <= map.y + 1;
+        } else { // vertical
+          // Check if in map column or adjacent columns
+          isInMapRange = x >= map.x - 1 && x <= map.x + 1;
+        }
 
-        if (isWithinShipwreckRange && isNotAdjacentToRocks && 
-            isNotInOceanCurrentRowOrCol && isInMapRow) {
+        if (isWithinShipwreckRange && isNotInOceanCurrentRowOrCol && isInMapRange) {
           possibleTreasureLocations.push({ x, y });
         }
       }
@@ -112,12 +140,20 @@ const TreasureRift = () => {
       return initializeGame();
     }
 
-    // Select a random valid location for the treasure
-    const treasure = possibleTreasureLocations[
-      Math.floor(Math.random() * possibleTreasureLocations.length)
-    ];
+    // If more than one valid location, ensure uniqueness somehow
+    if (possibleTreasureLocations.length > 1) {
+      // Additional constraint: This is just a placeholder - you might need more complex logic
+      // to ensure a unique solution
+      possibleTreasureLocations.sort((a, b) => 
+        MANHATTAN_DISTANCE(a.x, a.y, shipWreck.x, shipWreck.y) - 
+        MANHATTAN_DISTANCE(b.x, b.y, shipWreck.x, shipWreck.y)
+      );
+    }
 
-    // Step 6: Place pirates (avoiding all other elements)
+    // Select the first valid location for the treasure (ensures uniqueness)
+    const treasure = possibleTreasureLocations[0];
+
+    // Step 7: Place pirates (avoiding all other elements)
     const pirates = [];
     const numPirates = 5; // Adjust number of pirates as needed
     let attempts = 0;
@@ -147,22 +183,23 @@ const TreasureRift = () => {
       rocks,
       oceanCurrent,
       map,
+      compass,
       shipWreck,
       pirates,
       treasure
     });
 
-    // Create a new board with placed elements
+    // Create a new board with placed elements (all hidden initially)
     const newBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
 
-    // Place visible elements on the board
+    // Place elements on the board (all hidden initially)
     rocks.forEach(rock => {
-      newBoard[rock.y][rock.x] = { type: 'rock', visible: true };
+      newBoard[rock.y][rock.x] = { type: 'rock', visible: false };
     });
 
-    newBoard[oceanCurrent.y][oceanCurrent.x] = { type: 'oceanCurrent', visible: true };
-    newBoard[map.y][map.x] = { type: 'map', visible: true };
-    newBoard[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: true };
+    newBoard[oceanCurrent.y][oceanCurrent.x] = { type: 'oceanCurrent', visible: false };
+    newBoard[map.y][map.x] = { type: 'map', visible: false };
+    newBoard[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: false };
 
     // Hidden elements (pirates and treasure)
     pirates.forEach(pirate => {
@@ -179,8 +216,9 @@ const TreasureRift = () => {
       return;
     }
 
-    // Increment moves counter
-    setMoves(moves + 1);
+    // Decrement explorations left
+    const newExplorationsLeft = explorationsLeft - 1;
+    setExplorationsLeft(newExplorationsLeft);
 
     // Create a copy of revealed cells
     const newRevealedCells = [...revealedCells, { x, y }];
@@ -189,6 +227,10 @@ const TreasureRift = () => {
     // Get the cell content
     const cell = board[y][x];
 
+    // Create new board with the revealed cell
+    const newBoard = [...board];
+    
+    // If no specific content in the cell
     if (!cell) {
       // Empty cell - provide hint based on proximity
       const { treasure, rocks, pirates } = elements;
@@ -223,56 +265,62 @@ const TreasureRift = () => {
       setMessage(hint);
       
       // Update board with the revealed empty cell
-      const newBoard = [...board];
       newBoard[y][x] = { type: 'empty', visible: true, hint };
-      setBoard(newBoard);
-    } else if (cell.type === 'treasure' && !cell.visible) {
-      // Found treasure - win the game
-      const newBoard = [...board];
+    } else {
+      // Reveal the cell with its content
       newBoard[y][x] = { ...cell, visible: true };
-      setBoard(newBoard);
-      setGameStatus('won');
-      setMessage(`Congratulations! You found the treasure in ${moves + 1} moves!`);
-    } else if (cell.type === 'pirate' && !cell.visible) {
-      // Hit a pirate
-      const newPirateEncounters = pirateEncounters + 1;
-      setPirateEncounters(newPirateEncounters);
       
-      const newBoard = [...board];
-      newBoard[y][x] = { ...cell, visible: true };
-      setBoard(newBoard);
-      
-      if (newPirateEncounters >= 3) {
-        // Game over - too many pirates
-        setGameStatus('lost');
-        setMessage('The pirates captured you! Game over.');
+      if (cell.type === 'treasure') {
+        // Found treasure - win the game
+        setGameStatus('won');
+        // Score is based on explorations left
+        const finalScore = newExplorationsLeft * 100;
+        setScore(finalScore);
+        setMessage(`Congratulations! You found the treasure with ${newExplorationsLeft} explorations left! Score: ${finalScore}`);
+      } else if (cell.type === 'pirate') {
+        // Hit a pirate
+        const newPirateEncounters = pirateEncounters + 1;
+        setPirateEncounters(newPirateEncounters);
         
-        // Reveal all pirates and the treasure
-        const finalBoard = [...newBoard];
-        elements.pirates.forEach(pirate => {
-          finalBoard[pirate.y][pirate.x] = { type: 'pirate', visible: true };
-        });
-        finalBoard[elements.treasure.y][elements.treasure.x] = { type: 'treasure', visible: true };
-        setBoard(finalBoard);
+        if (newPirateEncounters >= 3) {
+          // Game over - too many pirates
+          setGameStatus('lost');
+          setMessage('The pirates captured you! Game over.');
+          
+          // Reveal all pirates and the treasure
+          elements.pirates.forEach(pirate => {
+            newBoard[pirate.y][pirate.x] = { type: 'pirate', visible: true };
+          });
+          newBoard[elements.treasure.y][elements.treasure.x] = { type: 'treasure', visible: true };
+        } else {
+          setMessage(`You encountered a pirate! (${newPirateEncounters}/3 encounters)`);
+        }
       } else {
-        setMessage(`You encountered a pirate! (${newPirateEncounters}/3 encounters)`);
+        // Generate message based on what was revealed
+        if (cell.type === 'map') {
+          const compassDir = elements.compass.orientation === 'horizontal' ? 'rows' : 'columns';
+          setMessage(`This map shows the treasure is within the three adjacent ${compassDir}!`);
+        } else if (cell.type === 'shipWreck') {
+          setMessage('The shipwreck suggests the treasure is within 3 squares of here.');
+        } else if (cell.type === 'oceanCurrent') {
+          setMessage('The treasure cannot be in this row or column due to the ocean current.');
+        } else if (cell.type === 'rock') {
+          setMessage('A large rock. The treasure cannot be within one square of any rock (including diagonals).');
+        }
       }
-    } else if (!cell.visible) {
-      // Reveal other hidden elements
-      const newBoard = [...board];
-      newBoard[y][x] = { ...cell, visible: true };
-      setBoard(newBoard);
+    }
+    
+    setBoard(newBoard);
+    
+    // Check if we ran out of explorations
+    if (newExplorationsLeft <= 0 && gameStatus === 'playing') {
+      setGameStatus('lost');
+      setMessage('You ran out of explorations! The treasure remains hidden.');
       
-      // Generate message based on what was revealed
-      if (cell.type === 'map') {
-        setMessage('This map shows the treasure is in this row!');
-      } else if (cell.type === 'shipWreck') {
-        setMessage('The shipwreck suggests the treasure is within 3 squares of here.');
-      } else if (cell.type === 'oceanCurrent') {
-        setMessage('The treasure cannot be in this row or column due to the ocean current.');
-      } else if (cell.type === 'rock') {
-        setMessage('Just a rock. The treasure cannot be adjacent to rocks.');
-      }
+      // Reveal the treasure
+      const finalBoard = [...newBoard];
+      finalBoard[elements.treasure.y][elements.treasure.x] = { type: 'treasure', visible: true };
+      setBoard(finalBoard);
     }
   };
 
@@ -282,29 +330,39 @@ const TreasureRift = () => {
 
   const getCellClassName = (x, y) => {
     const cell = board[y][x];
+    const revealed = isRevealed(x, y);
     
-    if (!cell || !cell.visible) {
-      return 'cell hidden';
+    if (!revealed) {
+      return `cell hidden cell-${x}-${y}`;
     }
     
-    return `cell ${cell.type} visible`;
+    if (!cell || !cell.visible) {
+      return `cell hidden cell-${x}-${y}`;
+    }
+    
+    return `cell ${cell.type} visible cell-${x}-${y}`;
   };
 
   const getCellContent = (x, y) => {
     const cell = board[y][x];
+    const revealed = isRevealed(x, y);
+    
+    if (!revealed) {
+      return '';
+    }
     
     if (!cell || !cell.visible) {
       return '';
     }
     
     switch (cell.type) {
-      case 'rock': return '🪨';
+      case 'rock': return '🗿';
       case 'oceanCurrent': return '🌊';
-      case 'map': return '🗺️';
-      case 'shipWreck': return '🚢';
-      case 'pirate': return '☠️';
-      case 'treasure': return '💰';
-      case 'empty': return '🔍';
+      case 'map': return '🧭';
+      case 'shipWreck': return '⚓';
+      case 'pirate': return '🏴‍☠️';
+      case 'treasure': return '💎';
+      case 'empty': return '';
       default: return '';
     }
   };
@@ -313,61 +371,81 @@ const TreasureRift = () => {
     <div className="treasure-rift-container">
       <div className="game-header">
         <h1>Treasure Rift</h1>
+        <div className="compass-display">
+          {elements.compass.orientation === 'horizontal' ? '⬅️ ➡️' : '⬆️ ⬇️'}
+        </div>
         <div className="game-stats">
           <div className="stat-item">
-            <span className="stat-label">Moves:</span>
-            <span className="stat-value">{moves}</span>
+            <span className="stat-label">Explorations</span>
+            <span className="stat-value">{explorationsLeft}/{MAX_EXPLORATIONS}</span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">Pirate Encounters:</span>
+            <span className="stat-label">Pirates</span>
             <span className="stat-value">{pirateEncounters}/3</span>
           </div>
+          {gameStatus === 'won' && (
+            <div className="stat-item score">
+              <span className="stat-label">Score</span>
+              <span className="stat-value">{score}</span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="game-message">{message}</div>
 
-      <div className="game-board">
-        {board.map((row, y) => (
-          <div key={y} className="board-row">
-            {row.map((_, x) => (
-              <div
-                key={`${x}-${y}`}
-                className={getCellClassName(x, y)}
-                onClick={() => handleCellClick(x, y)}
-              >
-                {getCellContent(x, y)}
-              </div>
-            ))}
-          </div>
-        ))}
+      <div className="game-board-container">
+        <div className="game-board">
+          {board.map((row, y) => (
+            <div key={y} className="board-row">
+              {row.map((_, x) => (
+                <div
+                  key={`${x}-${y}`}
+                  className={getCellClassName(x, y)}
+                  onClick={() => handleCellClick(x, y)}
+                >
+                  {getCellContent(x, y)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="game-controls">
+        <Link to="/" className="back-button">Back to Games</Link>
+        <button className="new-game-button" onClick={initializeGame}>New Game</button>
       </div>
 
       <div className="game-legend">
         <h3>Legend</h3>
         <div className="legend-items">
           <div className="legend-item">
-            <span className="legend-icon">🪨</span>
-            <span className="legend-text">Rock - Treasure cannot be adjacent to rocks</span>
+            <span className="legend-icon">🗿</span>
+            <span className="legend-text">Ancient Rock - Treasure cannot be within one square (including diagonally)</span>
           </div>
           <div className="legend-item">
             <span className="legend-icon">🌊</span>
-            <span className="legend-text">Ocean Current - Treasure cannot be in this row or column</span>
+            <span className="legend-text">Whirlpool - Treasure cannot be in this row or column</span>
           </div>
           <div className="legend-item">
-            <span className="legend-icon">🗺️</span>
-            <span className="legend-text">Map - Treasure is in the same row</span>
+            <span className="legend-icon">🧭</span>
+            <span className="legend-text">Map - Indicates treasure is within three adjacent rows or columns</span>
           </div>
           <div className="legend-item">
-            <span className="legend-icon">🚢</span>
+            <span className="legend-icon compass-icons">⬅️ ➡️ / ⬆️ ⬇️</span>
+            <span className="legend-text">Compass - Shows if treasure is in horizontal rows or vertical columns</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-icon">⚓</span>
             <span className="legend-text">Shipwreck - Treasure is within 3 squares</span>
           </div>
           <div className="legend-item">
-            <span className="legend-icon">☠️</span>
+            <span className="legend-icon">🏴‍☠️</span>
             <span className="legend-text">Pirate - Encounter 3 pirates and you lose!</span>
           </div>
           <div className="legend-item">
-            <span className="legend-icon">💰</span>
+            <span className="legend-icon">💎</span>
             <span className="legend-text">Treasure - Find this to win!</span>
           </div>
         </div>
@@ -378,7 +456,10 @@ const TreasureRift = () => {
           <div className="game-over-content">
             <h2>{gameStatus === 'won' ? 'Victory!' : 'Game Over!'}</h2>
             <p>{message}</p>
-            <button className="restart-button" onClick={initializeGame}>Play Again</button>
+            <div className="game-over-buttons">
+              <button className="restart-button" onClick={initializeGame}>Play Again</button>
+              <Link to="/" className="home-button">Back to Games</Link>
+            </div>
           </div>
         </div>
       )}
