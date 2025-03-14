@@ -1,5 +1,5 @@
 // src/components/GridLock/GridLock.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './GridLock.css';
 
@@ -15,30 +15,30 @@ const wordDictionaries = {
 };
 
 const GridLock = () => {
-  // Use a ref to store the current letterValues to prevent stale closures
-  const letterValuesRef = useRef({});
-  
+  // Game state
   const [gridSize, setGridSize] = useState(3);
   const [grid, setGrid] = useState([]);
   const [originalGrid, setOriginalGrid] = useState([]);
+  
+  // A single source of truth for letter values
   const [letterValues, setLetterValues] = useState({});
+  
+  // Values for display only
+  const [displayedLetters, setDisplayedLetters] = useState([]);
+  const [groupedLetterValues, setGroupedLetterValues] = useState({});
+  
+  // Game progress tracking
   const [rowSums, setRowSums] = useState([]);
   const [colSums, setColSums] = useState([]);
   const [rowMatches, setRowMatches] = useState([]);
   const [colMatches, setColMatches] = useState([]);
+  const [validColumnIndex, setValidColumnIndex] = useState(0);
+  
+  // Game states
   const [gameWon, setGameWon] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [solutionRevealed, setSolutionRevealed] = useState(false);
-  const [groupedLetterValues, setGroupedLetterValues] = useState({
-    0: [],
-    1: [],
-    2: [],
-    3: [],
-    4: []
-  });
-  const [validColumnIndex, setValidColumnIndex] = useState(0);
   const [invalidLetter, setInvalidLetter] = useState('');
-  const [displayLetters, setDisplayLetters] = useState(new Set());
   
   // Load Ethnocentric font
   useEffect(() => {
@@ -52,175 +52,231 @@ const GridLock = () => {
     };
   }, []);
   
-  // Update letterValuesRef whenever letterValues changes
-  useEffect(() => {
-    letterValuesRef.current = letterValues;
-  }, [letterValues]);
-  
-  // Generate a valid grid with valid words (rows only)
-  const generateValidGrid = (size) => {
-    const validGrid = [];
+  // STEP 1: Generate a column-first grid to ensure a valid column
+  const generateColumnFirstGrid = (size) => {
+    // First, choose a random valid word for the column
     const availableWords = [...wordDictionaries[size]];
-    
-    // Select random words for each row
-    for (let i = 0; i < size; i++) {
-      // Get a random word for this row
-      const randomIndex = Math.floor(Math.random() * availableWords.length);
-      const word = availableWords[randomIndex].toLowerCase();
-      
-      // Remove the word from available words
-      availableWords.splice(randomIndex, 1);
-      
-      // Add the word to the grid
-      const row = word.split('');
-      validGrid.push(row);
-    }
-    
-    return validGrid;
-  };
-  
-  // Generate a valid grid with valid rows and at least one valid column
-  const generateValidGridWithColumns = (size) => {
-    // Force more attempts to find a grid with a valid column
-    const maxAttempts = 100; // Increased from 50
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-      // Generate a grid with valid rows
-      const validGrid = generateValidGrid(size);
-      
-      // Check each column for a valid word
-      for (let j = 0; j < size; j++) {
-        const column = [];
-        for (let i = 0; i < size; i++) {
-          column.push(validGrid[i][j]);
-        }
-        
-        const columnWord = column.join('');
-        if (wordDictionaries[size].includes(columnWord)) {
-          return { grid: validGrid, validColumnIndex: j };
-        }
-      }
-      
-      attempts++;
-    }
-    
-    // If max attempts reached, modify a column to make it valid
-    const validGrid = generateValidGrid(size);
     const randomColumnIndex = Math.floor(Math.random() * size);
     
-    for (const word of wordDictionaries[size]) {
-      if (word.length !== size) continue;
+    // Shuffle available words for better randomness
+    for (let i = availableWords.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [availableWords[i], availableWords[j]] = [availableWords[j], availableWords[i]];
+    }
+    
+    // Find a column word
+    let columnWord = null;
+    for (const word of availableWords) {
+      if (word.length === size) {
+        columnWord = word;
+        break;
+      }
+    }
+    
+    if (!columnWord) {
+      columnWord = availableWords[0]; // Fallback
+    }
+    
+    // Create an empty grid
+    const grid = Array(size).fill().map(() => Array(size).fill(''));
+    
+    // Fill the chosen column with the valid word
+    for (let i = 0; i < size; i++) {
+      grid[i][randomColumnIndex] = columnWord[i];
+    }
+    
+    // Now fill rows with valid words
+    for (let rowIndex = 0; rowIndex < size; rowIndex++) {
+      // Get valid words for this row length
+      const potentialWords = availableWords.filter(word => word.length === size);
       
-      // Try to fit this word into the column
-      const modifiedGrid = JSON.parse(JSON.stringify(validGrid));
-      let canUpdate = true;
+      // Shuffle potential words
+      for (let i = potentialWords.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [potentialWords[i], potentialWords[j]] = [potentialWords[j], potentialWords[i]];
+      }
       
-      for (let i = 0; i < size; i++) {
-        const newRow = [...modifiedGrid[i]];
-        newRow[randomColumnIndex] = word[i];
-        const rowWord = newRow.join('');
-        
-        if (!wordDictionaries[size].includes(rowWord)) {
-          canUpdate = false;
+      // Find a word that matches the letter in the valid column
+      let rowWord = null;
+      for (const word of potentialWords) {
+        if (word[randomColumnIndex] === columnWord[rowIndex]) {
+          rowWord = word;
           break;
-        } else {
-          modifiedGrid[i] = newRow;
         }
       }
       
-      if (canUpdate) {
-        return { grid: modifiedGrid, validColumnIndex: randomColumnIndex };
+      // If no matching word found, create a custom word (unlikely)
+      if (!rowWord) {
+        const customWord = Array(size).fill('');
+        for (let j = 0; j < size; j++) {
+          if (j === randomColumnIndex) {
+            customWord[j] = columnWord[rowIndex];
+          } else {
+            // Fill with random letters to form a valid word
+            customWord[j] = 'a'; // Placeholder, would need real word generation
+          }
+        }
+        rowWord = customWord.join('');
+      }
+      
+      // Fill this row
+      for (let colIndex = 0; colIndex < size; colIndex++) {
+        grid[rowIndex][colIndex] = rowWord[colIndex];
       }
     }
     
-    // Last resort - this should rarely happen with increased attempts
-    console.log("Could not generate grid with valid column. Using fallback.");
-    return { grid: validGrid, validColumnIndex: 0 };
+    return { grid, validColumnIndex: randomColumnIndex };
   };
   
-  // Calculate row sums
-  const calculateRowSums = (grid, values) => {
-    return grid.map(row => {
-      return row.reduce((sum, letter) => sum + values[letter], 0);
-    });
-  };
-  
-  // Calculate column sums
-  const calculateColumnSums = (grid, values) => {
-    const sums = [];
-    for (let j = 0; j < grid[0].length; j++) {
-      let sum = 0;
-      for (let i = 0; i < grid.length; i++) {
-        sum += values[grid[i][j]];
+  // STEP 2: Assign fixed values to each letter (0-4)
+  const assignLetterValues = (grid) => {
+    // Get all unique letters in the grid
+    const usedLetters = new Set();
+    for (let i = 0; i < grid.length; i++) {
+      for (let j = 0; j < grid[i].length; j++) {
+        usedLetters.add(grid[i][j]);
       }
-      sums.push(sum);
     }
-    return sums;
+    
+    // Create values object
+    const values = {};
+    
+    // Assign values 0-4 to used letters
+    const usedLettersArray = Array.from(usedLetters);
+    for (let i = 0; i < usedLettersArray.length; i++) {
+      values[usedLettersArray[i]] = Math.floor(Math.random() * 5); // 0-4
+    }
+    
+    // Add some dummy letters with values
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    const alphabetArray = alphabet.split('');
+    const unusedLetters = alphabetArray.filter(letter => !usedLetters.has(letter));
+    
+    // Shuffle unused letters
+    for (let i = unusedLetters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unusedLetters[i], unusedLetters[j]] = [unusedLetters[j], unusedLetters[i]];
+    }
+    
+    // Assign values to all remaining letters
+    for (let i = 0; i < unusedLetters.length; i++) {
+      values[unusedLetters[i]] = Math.floor(Math.random() * 5); // 0-4
+    }
+    
+    return values;
   };
   
-  // Calculate if row totals match expected values
-  const calculateRowMatches = () => {
-    const currentValues = letterValuesRef.current;
-    
-    return rowSums.map((expectedSum, rowIndex) => {
-      const currentSum = grid[rowIndex].reduce((sum, cell) => {
-        const value = cell.letter ? currentValues[cell.letter] || 0 : 0;
-        return sum + value;
-      }, 0);
-      return currentSum === expectedSum;
-    });
-  };
-  
-  // Calculate if column totals match expected values
-  const calculateColumnMatches = () => {
-    const currentValues = letterValuesRef.current;
-    
-    return colSums.map((expectedSum, colIndex) => {
-      let currentSum = 0;
-      for (let i = 0; i < grid.length; i++) {
-        const value = grid[i][colIndex].letter ? currentValues[grid[i][colIndex].letter] || 0 : 0;
-        currentSum += value;
+  // STEP 3: Create display letter groups with dummy letters
+  const createDisplayLetterGroups = (grid, letterValues) => {
+    // Get all letters used in the grid
+    const usedLetters = new Set();
+    for (let i = 0; i < grid.length; i++) {
+      for (let j = 0; j < grid[i].length; j++) {
+        usedLetters.add(grid[i][j]);
       }
-      return currentSum === expectedSum;
-    });
+    }
+    
+    // Sort letters by their values (0-4)
+    const grouped = {
+      0: [],
+      1: [],
+      2: [],
+      3: [],
+      4: []
+    };
+    
+    // Add used letters to their value groups
+    const usedLettersArray = Array.from(usedLetters);
+    for (const letter of usedLettersArray) {
+      const value = letterValues[letter];
+      grouped[value].push(letter);
+    }
+    
+    // Add dummy letters to ensure each value has at least 2 letters
+    // Get unused letters
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    const unusedLetters = [];
+    for (let i = 0; i < alphabet.length; i++) {
+      const letter = alphabet[i];
+      if (!usedLetters.has(letter)) {
+        unusedLetters.push(letter);
+      }
+    }
+    
+    // Shuffle unused letters
+    for (let i = unusedLetters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unusedLetters[i], unusedLetters[j]] = [unusedLetters[j], unusedLetters[i]];
+    }
+    
+    // Add dummy letters to ensure at least 2 letters per value
+    let dummyIndex = 0;
+    for (let value = 0; value <= 4; value++) {
+      // Need at least 2 letters
+      const neededLetters = Math.max(0, 2 - grouped[value].length);
+      
+      // Add some extra letters sometimes
+      const extraLetters = Math.random() < 0.4 ? 1 : 0;
+      
+      const totalToAdd = neededLetters + extraLetters;
+      
+      for (let i = 0; i < totalToAdd && dummyIndex < unusedLetters.length; i++) {
+        const dummyLetter = unusedLetters[dummyIndex++];
+        grouped[value].push(dummyLetter);
+      }
+    }
+    
+    // Sort all letters in each group alphabetically
+    for (let value = 0; value <= 4; value++) {
+      grouped[value].sort();
+    }
+    
+    // Create flat list of all displayed letters
+    const allDisplayed = [];
+    for (let value = 0; value <= 4; value++) {
+      allDisplayed.push(...grouped[value]);
+    }
+    
+    return { grouped, allDisplayed };
   };
   
   // Generate a new game
   const generateNewGame = (size) => {
     const newGridSize = size || gridSize;
     
-    // First, generate grid with valid rows and at least one valid column
-    const { grid: validGrid, validColumnIndex } = generateValidGridWithColumns(newGridSize);
-    
-    // Then, assign random values to each letter (0-4)
-    const values = {};
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-    for (let i = 0; i < alphabet.length; i++) {
-      // Use a consistent random seed method
-      values[alphabet[i]] = Math.floor(Math.random() * 5); // 0-4
-    }
-    
-    // Calculate row and column sums using these values
-    const rSums = calculateRowSums(validGrid, values);
-    const cSums = calculateColumnSums(validGrid, values);
-    
-    // Update the ref first to ensure consistent access
-    letterValuesRef.current = values;
-    
-    // Set all the state in a logical order
-    setLetterValues(values);
+    // Step 1: Generate a grid with a valid column
+    const { grid: validGrid, validColumnIndex } = generateColumnFirstGrid(newGridSize);
     setOriginalGrid(validGrid);
     setValidColumnIndex(validColumnIndex);
+    
+    // Step 2: Assign random values to each letter (0-4)
+    const values = assignLetterValues(validGrid);
+    setLetterValues(values);
+    
+    // Step 3: Create display letter groups with dummy letters
+    const { grouped, allDisplayed } = createDisplayLetterGroups(validGrid, values);
+    setGroupedLetterValues(grouped);
+    setDisplayedLetters(allDisplayed);
+    
+    // Step 4: Calculate row and column sums
+    const rSums = validGrid.map(row => row.reduce((sum, letter) => sum + values[letter], 0));
     setRowSums(rSums);
+    
+    const cSums = [];
+    for (let j = 0; j < validGrid[0].length; j++) {
+      let sum = 0;
+      for (let i = 0; i < validGrid.length; i++) {
+        sum += values[validGrid[i][j]];
+      }
+      cSums.push(sum);
+    }
     setColSums(cSums);
     
-    // Create player grid with only top-left and bottom-right revealed
+    // Step 5: Create player grid with only top-left and bottom-right revealed
     const playerGrid = [];
     for (let i = 0; i < newGridSize; i++) {
       const row = [];
       for (let j = 0; j < newGridSize; j++) {
-        // Reveal only top-left and bottom-right
         if ((i === 0 && j === 0) || (i === newGridSize - 1 && j === newGridSize - 1)) {
           row.push({ letter: validGrid[i][j], revealed: true });
         } else {
@@ -230,6 +286,7 @@ const GridLock = () => {
       playerGrid.push(row);
     }
     
+    // Set initial game state
     setGrid(playerGrid);
     setGameWon(false);
     setSolutionRevealed(false);
@@ -239,14 +296,35 @@ const GridLock = () => {
     setInvalidLetter('');
   };
   
+  // Calculate if row totals match expected values
+  const calculateRowMatches = () => {
+    return rowSums.map((expectedSum, rowIndex) => {
+      const currentSum = grid[rowIndex].reduce((sum, cell) => {
+        return sum + (cell.letter ? letterValues[cell.letter] || 0 : 0);
+      }, 0);
+      return currentSum === expectedSum;
+    });
+  };
+  
+  // Calculate if column totals match expected values
+  const calculateColumnMatches = () => {
+    return colSums.map((expectedSum, colIndex) => {
+      let currentSum = 0;
+      for (let i = 0; i < grid.length; i++) {
+        currentSum += grid[i][colIndex].letter ? letterValues[grid[i][colIndex].letter] || 0 : 0;
+      }
+      return currentSum === expectedSum;
+    });
+  };
+  
   // Handle cell input change
   const handleCellChange = (rowIndex, colIndex, value) => {
     if (grid[rowIndex][colIndex].revealed || gameWon || solutionRevealed) return;
     
     const inputLetter = value.toLowerCase();
     
-    // Check if letter is in displayLetters
-    if (inputLetter && !displayLetters.has(inputLetter)) {
+    // Check if the letter is in the displayed letters
+    if (inputLetter && !displayedLetters.includes(inputLetter)) {
       setInvalidLetter(inputLetter);
       setTimeout(() => setInvalidLetter(''), 1500); // Clear after 1.5 seconds
       return;
@@ -346,80 +424,6 @@ const GridLock = () => {
       setGameWon(true);
     }
   }, [grid, solutionRevealed]);
-  
-  // Group letter values whenever letterValues or originalGrid changes
-  useEffect(() => {
-    if (!originalGrid.length) return;
-    
-    // Use current letterValues from ref to ensure consistency
-    const currentValues = { ...letterValuesRef.current };
-    
-    const grouped = {};
-    const newDisplayLetters = new Set();
-    
-    // Initialize groups for 0-4
-    for (let i = 0; i <= 4; i++) {
-      grouped[i] = [];
-    }
-    
-    // Get only the letters used in the grid
-    const usedLetters = new Set();
-    originalGrid.forEach(row => {
-      row.forEach(letter => {
-        usedLetters.add(letter);
-      });
-    });
-    
-    // Group used letters by their values
-    Object.entries(currentValues).forEach(([letter, value]) => {
-      if (grouped[value] !== undefined && usedLetters.has(letter)) {
-        grouped[value].push(letter);
-        newDisplayLetters.add(letter);
-      }
-    });
-    
-    // Add dummy letters to ensure each value has at least 2 letters
-    // and to introduce some confusion for players
-    const unusedLetters = [];
-    for (let i = 0; i < 26; i++) {
-      const letter = String.fromCharCode(97 + i); // a-z
-      if (!usedLetters.has(letter)) {
-        unusedLetters.push(letter);
-      }
-    }
-    
-    // Shuffle unused letters for random selection
-    unusedLetters.sort(() => Math.random() - 0.5);
-    
-    // Add dummy letters to ensure each value has at least 2 letters
-    for (let i = 0; i <= 4; i++) {
-      // If a value group has less than 2 letters, add dummy letters
-      const neededLetters = Math.max(0, 2 - grouped[i].length);
-      
-      // Also add 1-2 random dummy letters to some groups to create confusion
-      const extraLetters = Math.random() < 0.4 ? 1 : 0; // 40% chance to add an extra letter
-      
-      const totalDummies = neededLetters + extraLetters;
-      
-      // Add dummy letters if we have enough unused letters
-      for (let j = 0; j < totalDummies && unusedLetters.length > 0; j++) {
-        const dummyLetter = unusedLetters.pop();
-        if (dummyLetter) {
-          // Make sure dummy letters use the same value for display and calculation
-          grouped[i].push(dummyLetter);
-          newDisplayLetters.add(dummyLetter);
-        }
-      }
-    }
-    
-    // Sort letters within each group
-    for (let i = 0; i <= 4; i++) {
-      grouped[i] = grouped[i].sort();
-    }
-    
-    setGroupedLetterValues(grouped);
-    setDisplayLetters(newDisplayLetters);
-  }, [letterValues, originalGrid]);
 
   return (
     <div className="grid-lock-container">
@@ -526,8 +530,8 @@ const GridLock = () => {
                       />
                       {(cell.letter || solutionRevealed) && (
                         <span className="letter-value-indicator">
-                          {letterValuesRef.current[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] !== undefined 
-                            ? letterValuesRef.current[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] 
+                          {letterValues[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] !== undefined 
+                            ? letterValues[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] 
                             : '?'}
                         </span>
                       )}
