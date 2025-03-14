@@ -210,12 +210,14 @@ const GridLock = () => {
     setOriginalGrid(validGrid);
     setValidColumnIndex(validColumnIndex);
     
-    // Assign random values to each letter (changed from 0-5 to 0-4)
+    // Assign random values to each letter (0-4)
     const values = {};
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     for (let i = 0; i < alphabet.length; i++) {
-      values[alphabet[i]] = Math.floor(Math.random() * 5); // Changed from 0-5 to 0-4
+      values[alphabet[i]] = Math.floor(Math.random() * 5); // 0-4
     }
+    
+    // Store the letter values first before calculating sums
     setLetterValues(values);
     
     // Calculate row and column sums
@@ -553,18 +555,21 @@ const GridLock = () => {
       )}
       
       <div className="game-instructions">
-        <h3>HOW TO PLAY</h3>
-        <ul>
-          <li>Fill in the grid with letters to form valid words in each row</li>
-          <li>The sum of each row and column must match the numbers shown</li>
-          <li>Each letter has a numerical value (0-4) shown in the left panel</li>
-          <li>Use the revealed letters in the top-left and bottom-right as clues</li>
-          <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
-        </ul>
-        <p className="valid-column-note">
-          <strong>Bonus:</strong> One column (marked with ▲) will also form a valid word!
-        </p>
-      </div>
+  <h3>HOW TO PLAY</h3>
+  <ul>
+    <li>Fill in the grid with letters to form valid words in each row</li>
+    <li>The sum of each row and column must match the numbers shown</li>
+    <li>Each letter has a numerical value (0-4) shown in the left panel</li>
+    <li>Use the revealed letters in the top-left and bottom-right as clues</li>
+    <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
+  </ul>
+  <p className="valid-column-note">
+    <strong>Bonus:</strong> One column (marked with ▲) will also form a valid word!
+  </p>
+  <p className="hint-note">
+    <strong>Tip:</strong> Not all letters shown in the values panel are used in the grid!
+  </p>
+</div>
     </div>
   );
 };
