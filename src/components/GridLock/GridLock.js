@@ -14,6 +14,13 @@ const wordDictionaries = {
   6: ['planet', 'market', 'basket', 'pocket', 'socket', 'flower', 'shower', 'slower', 'towers', 'powers', 'carpet', 'forget', 'target', 'carrot', 'pencil', 'happen', 'hidden', 'kitten', 'golden', 'frozen', 'listen', 'spoken', 'broken', 'chosen', 'woven', 'action', 'nation', 'lotion', 'potion', 'motion', 'option', 'station', 'caution', 'faction', 'mention', 'dragon', 'carbon', 'ribbon', 'cotton', 'button', 'common', 'cannon', 'season', 'reason', 'treason', 'lesson', 'blossom', 'tender', 'vendor', 'border', 'murder', 'powder', 'wonder', 'louder', 'holder', 'folder', 'summer', 'dinner', 'winner', 'copper', 'hopper', 'proper', 'supper', 'matter', 'batter', 'letter', 'better', 'setter', 'bitter', 'litter', 'sitter']
 };
 
+// Words for first column (vertical words)
+const verticalWordsByLength = {
+  3: ['cat', 'dog', 'rat', 'bat', 'hat', 'win', 'map', 'fog', 'big', 'top', 'pen', 'sun', 'fan', 'gem', 'web'],
+  4: ['card', 'game', 'time', 'past', 'wind', 'star', 'data', 'fish', 'town', 'book', 'mind', 'soil', 'film', 'tree', 'city'],
+  5: ['magic', 'plant', 'dream', 'space', 'water', 'beach', 'music', 'tiger', 'party', 'stone', 'world', 'light', 'earth', 'cloud', 'robot']
+};
+
 const GridLock = () => {
   // Game state
   const [difficulty, setDifficulty] = useState(3); // 3, 4, or 5 rows
@@ -63,41 +70,49 @@ const GridLock = () => {
   
   // Generate the game grid with the first column as a valid word
   const generateGameGrid = (rows) => {
-    // Step 1: Choose a random word for the first column
-    const firstColumnLetters = [];
+    // Step 1: Select a vertical word for the first column
+    let verticalWord;
     
-    // Select letters for the first column - this will be our vertical word
-    const allPossibleLetters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-    
-    // Shuffle the letters
-    for (let i = allPossibleLetters.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allPossibleLetters[i], allPossibleLetters[j]] = [allPossibleLetters[j], allPossibleLetters[i]];
-    }
-    
-    // Pick first 'rows' letters that have at least one word starting with them
-    for (let letter of allPossibleLetters) {
-      // Find if there are words starting with this letter
-      let hasWords = false;
-      for (let wordLength = 3; wordLength <= 6; wordLength++) {
-        if (findWordsStartingWith(letter, wordLength).length > 0) {
-          hasWords = true;
-          break;
-        }
+    // Try to find a word that matches our row count exactly
+    if (verticalWordsByLength[rows] && verticalWordsByLength[rows].length > 0) {
+      // Pick a random word from the list for this row count
+      const wordOptions = verticalWordsByLength[rows];
+      verticalWord = wordOptions[Math.floor(Math.random() * wordOptions.length)];
+    } else {
+      // Fallback: construct a word from valid starting letters
+      const allPossibleLetters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+      verticalWord = '';
+      
+      // Shuffle the letters
+      for (let i = allPossibleLetters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [allPossibleLetters[i], allPossibleLetters[j]] = [allPossibleLetters[j], allPossibleLetters[i]];
       }
       
-      if (hasWords) {
-        firstColumnLetters.push(letter);
-        if (firstColumnLetters.length === rows) break;
+      // Pick first 'rows' letters that have at least one word starting with them
+      for (let letter of allPossibleLetters) {
+        // Find if there are words starting with this letter
+        let hasWords = false;
+        for (let wordLength = 3; wordLength <= 6; wordLength++) {
+          if (findWordsStartingWith(letter, wordLength).length > 0) {
+            hasWords = true;
+            break;
+          }
+        }
+        
+        if (hasWords) {
+          verticalWord += letter;
+          if (verticalWord.length === rows) break;
+        }
       }
     }
     
     // Create the grid
     const grid = Array(rows).fill().map(() => Array(6).fill(''));
     
-    // Fill the first column
-    for (let i = 0; i < rows; i++) {
-      grid[i][0] = firstColumnLetters[i];
+    // Fill the first column with our vertical word
+    for (let i = 0; i < rows && i < verticalWord.length; i++) {
+      grid[i][0] = verticalWord[i];
     }
     
     // Step 2: For each row, choose a valid word that starts with the first column letter
@@ -224,6 +239,29 @@ const GridLock = () => {
     return { rowSums, colSums };
   };
   
+  // Reveal random cells at start (3 random cells)
+  const getRandomRevealedCells = (grid, numCells = 3) => {
+    const availableCells = [];
+    
+    // Find all cells that aren't in the first column and have a letter
+    for (let i = 0; i < grid.length; i++) {
+      for (let j = 1; j < grid[i].length; j++) { // Skip first column (already revealed)
+        if (grid[i][j]) {
+          availableCells.push({ row: i, col: j });
+        }
+      }
+    }
+    
+    // Shuffle the available cells
+    for (let i = availableCells.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [availableCells[i], availableCells[j]] = [availableCells[j], availableCells[i]];
+    }
+    
+    // Take the first numCells cells
+    return availableCells.slice(0, Math.min(numCells, availableCells.length));
+  };
+  
   // Create a new game
   const generateNewGame = (rows) => {
     const difficultyLevel = rows || difficulty;
@@ -242,12 +280,18 @@ const GridLock = () => {
     setRowSums(rowSums);
     setColSums(colSums);
     
-    // Create player grid with only first column revealed
-    const playerGrid = gameGrid.map(row => {
-      return row.map((letter, colIndex) => {
+    // Get 3 random cells to reveal
+    const randomCells = getRandomRevealedCells(gameGrid, 3);
+    
+    // Create player grid with first column and random cells revealed
+    const playerGrid = gameGrid.map((row, i) => {
+      return row.map((letter, j) => {
+        // Check if this cell is the first column or one of the random cells
+        const isRandomRevealed = randomCells.some(cell => cell.row === i && cell.col === j);
+        
         return {
-          letter: colIndex === 0 ? letter : '', // Reveal only the first column
-          revealed: colIndex === 0             // Mark first column as revealed
+          letter: (j === 0 || isRandomRevealed) ? letter : '', // Reveal first column and random cells
+          revealed: (j === 0 || isRandomRevealed)              // Mark them as revealed
         };
       });
     });
@@ -331,7 +375,7 @@ const GridLock = () => {
     
     for (let i = 0; i < grid.length; i++) {
       for (let j = 1; j < grid[i].length; j++) { // Skip first column (already revealed)
-        if (grid[i][j] && !grid[i][j].revealed && !grid[i][j].letter && originalGrid[i][j]) {
+        if (grid[i][j] && !grid[i][j].revealed && originalGrid[i][j]) {
           unrevealedCells.push({ rowIndex: i, colIndex: j });
         }
       }
@@ -355,22 +399,19 @@ const GridLock = () => {
   
   // Reveal the solution
   const revealSolution = () => {
-    const solutionGrid = [];
-    
-    for (let i = 0; i < originalGrid.length; i++) {
-      const row = [];
-      for (let j = 0; j < originalGrid[i].length; j++) {
-        if (originalGrid[i][j]) {
-          row.push({
-            letter: originalGrid[i][j],
-            revealed: j === 0  // Only first column is "revealed"
-          });
+    // Create a new grid with all cells filled but only marking first column as "revealed"
+    const solutionGrid = originalGrid.map((row, i) => {
+      return row.map((letter, j) => {
+        if (letter) {
+          return {
+            letter: letter,
+            revealed: j === 0 || (grid[i][j] && grid[i][j].revealed) // Mark first column and already revealed cells
+          };
         } else {
-          row.push(null); // Empty cell
+          return null; // Empty cell
         }
-      }
-      solutionGrid.push(row);
-    }
+      });
+    });
     
     setGrid(solutionGrid);
     setSolutionRevealed(true);
@@ -462,6 +503,22 @@ const GridLock = () => {
       )}
       
       <div className="game-area">
+        <div className="letter-values">
+          <h3>LETTER VALUES</h3>
+          <div className="letter-values-grid">
+            {Object.entries(letterValueGroups).map(([value, letters]) => (
+              <div key={value} className="letter-value-row">
+                <div className="value-cell">{value}</div>
+                <div className="letters-cells">
+                  {letters.map(letter => (
+                    <div key={letter} className="letter-cell">{letter}</div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
         <div className="grid-area">
           <div className="grid-container">
             <div className="grid">
@@ -497,7 +554,7 @@ const GridLock = () => {
                     return (
                       <div 
                         key={colIndex} 
-                        className={`grid-cell ${cell.revealed ? 'revealed' : ''} ${solutionRevealed ? 'solution' : ''} ${colIndex === 0 ? 'first-column' : ''}`}
+                        className={`grid-cell ${cell.revealed ? 'revealed' : ''} ${solutionRevealed && !cell.revealed ? 'solution' : ''} ${colIndex === 0 ? 'first-column' : ''}`}
                       >
                         <input
                           type="text"
@@ -522,22 +579,6 @@ const GridLock = () => {
             </div>
           </div>
         </div>
-        
-        <div className="letter-values">
-          <h3>LETTER VALUES</h3>
-          <div className="letter-values-grid">
-            {Object.entries(letterValueGroups).map(([value, letters]) => (
-              <div key={value} className="letter-value-row">
-                <div className="value-cell">{value}</div>
-                <div className="letters-cells">
-                  {letters.map(letter => (
-                    <div key={letter} className="letter-cell">{letter}</div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
       
       {gameWon && (
@@ -560,10 +601,11 @@ const GridLock = () => {
         <h3>HOW TO PLAY</h3>
         <ul>
           <li>Complete the grid with letters to form valid words in each row</li>
-          <li>The first column is already filled for you and forms a valid word</li>
+          <li>The first column is already filled and forms a vertical word</li>
           <li>Each row starts with the letter in the first column</li>
           <li>The sum of each row and column must match the numbers shown</li>
           <li>Each letter has a numerical value (0-4) shown in the table</li>
+          <li>3 letters are revealed to help you get started</li>
           <li>Need help? Use the HINT button to reveal a letter (adds 2 to your attempts)</li>
         </ul>
       </div>

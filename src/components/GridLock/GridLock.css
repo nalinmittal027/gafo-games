@@ -344,7 +344,7 @@ body {
   border-color: var(--accent-color);
 }
 
-.grid-cell.solution:not(.revealed) {
+.grid-cell.solution {
   background-color: var(--solution-cell-bg);
   border-color: var(--success-color);
 }
