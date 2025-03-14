@@ -37,6 +37,20 @@ const GridLock = () => {
     4: []
   });
   const [validColumnIndex, setValidColumnIndex] = useState(0);
+  const [invalidLetter, setInvalidLetter] = useState('');
+  const [displayLetters, setDisplayLetters] = useState(new Set());
+  
+  // Load Ethnocentric font
+  useEffect(() => {
+    const fontLink = document.createElement('link');
+    fontLink.href = 'https://fonts.cdnfonts.com/css/ethnocentric';
+    fontLink.rel = 'stylesheet';
+    document.head.appendChild(fontLink);
+    
+    return () => {
+      document.head.removeChild(fontLink);
+    };
+  }, []);
   
   // Update letterValuesRef whenever letterValues changes
   useEffect(() => {
@@ -67,103 +81,60 @@ const GridLock = () => {
   
   // Generate a valid grid with valid rows and at least one valid column
   const generateValidGridWithColumns = (size) => {
-    // First generate a grid with valid rows
-    const validGrid = generateValidGrid(size);
-    
-    // Check if any column is already a valid word
-    let validColumnIndex = -1;
-    
-    for (let j = 0; j < size; j++) {
-      const column = [];
-      for (let i = 0; i < size; i++) {
-        column.push(validGrid[i][j]);
-      }
-      
-      const columnWord = column.join('');
-      if (wordDictionaries[size].includes(columnWord)) {
-        validColumnIndex = j;
-        break;
-      }
-    }
-    
-    // If we already have a valid column, return the grid and valid column index
-    if (validColumnIndex !== -1) {
-      return { grid: validGrid, validColumnIndex };
-    }
-    
-    // Try to make one column valid by regenerating the grid up to several attempts
+    // Force more attempts to find a grid with a valid column
+    const maxAttempts = 100; // Increased from 50
     let attempts = 0;
-    const maxAttempts = 50;
     
     while (attempts < maxAttempts) {
-      const newGrid = generateValidGrid(size);
+      // Generate a grid with valid rows
+      const validGrid = generateValidGrid(size);
       
       // Check each column for a valid word
       for (let j = 0; j < size; j++) {
         const column = [];
         for (let i = 0; i < size; i++) {
-          column.push(newGrid[i][j]);
+          column.push(validGrid[i][j]);
         }
         
         const columnWord = column.join('');
         if (wordDictionaries[size].includes(columnWord)) {
-          return { grid: newGrid, validColumnIndex: j };
+          return { grid: validGrid, validColumnIndex: j };
         }
       }
       
       attempts++;
     }
     
-    // If we can't find a grid with a valid column, try to modify one column to make it valid
-    for (let j = 0; j < size; j++) {
-      // Start with our initial valid grid
+    // If max attempts reached, modify a column to make it valid
+    const validGrid = generateValidGrid(size);
+    const randomColumnIndex = Math.floor(Math.random() * size);
+    
+    for (const word of wordDictionaries[size]) {
+      if (word.length !== size) continue;
+      
+      // Try to fit this word into the column
       const modifiedGrid = JSON.parse(JSON.stringify(validGrid));
-      const availableWords = [...wordDictionaries[size]];
+      let canUpdate = true;
       
-      // Try to find a word that can be placed vertically with minimal changes
-      const potentialWords = availableWords.filter(word => word.length === size);
+      for (let i = 0; i < size; i++) {
+        const newRow = [...modifiedGrid[i]];
+        newRow[randomColumnIndex] = word[i];
+        const rowWord = newRow.join('');
+        
+        if (!wordDictionaries[size].includes(rowWord)) {
+          canUpdate = false;
+          break;
+        } else {
+          modifiedGrid[i] = newRow;
+        }
+      }
       
-      for (const word of potentialWords) {
-        // Check if this word can fit in the column with minimal changes
-        let changesNeeded = 0;
-        
-        for (let i = 0; i < size; i++) {
-          if (word[i] !== modifiedGrid[i][j]) {
-            changesNeeded++;
-          }
-        }
-        
-        // If less than half the letters need changing, try to use this word
-        if (changesNeeded <= Math.floor(size / 2)) {
-          // Try to update the rows to accommodate this column
-          let canUpdate = true;
-          
-          for (let i = 0; i < size; i++) {
-            if (word[i] !== modifiedGrid[i][j]) {
-              // Change this letter in the row
-              const newRow = modifiedGrid[i].slice();
-              newRow[j] = word[i];
-              const newRowWord = newRow.join('');
-              
-              // Check if the new row is still a valid word
-              if (wordDictionaries[size].includes(newRowWord)) {
-                modifiedGrid[i] = newRow;
-              } else {
-                canUpdate = false;
-                break;
-              }
-            }
-          }
-          
-          if (canUpdate) {
-            return { grid: modifiedGrid, validColumnIndex: j };
-          }
-        }
+      if (canUpdate) {
+        return { grid: modifiedGrid, validColumnIndex: randomColumnIndex };
       }
     }
     
-    // If all else fails, just return the original grid and mark the first column
-    // This is a fallback and shouldn't happen often
+    // Last resort - this should rarely happen with increased attempts
     console.log("Could not generate grid with valid column. Using fallback.");
     return { grid: validGrid, validColumnIndex: 0 };
   };
@@ -265,20 +236,31 @@ const GridLock = () => {
     setAttempts(0);
     setRowMatches(Array(newGridSize).fill(false));
     setColMatches(Array(newGridSize).fill(false));
+    setInvalidLetter('');
   };
   
   // Handle cell input change
   const handleCellChange = (rowIndex, colIndex, value) => {
     if (grid[rowIndex][colIndex].revealed || gameWon || solutionRevealed) return;
     
+    const inputLetter = value.toLowerCase();
+    
+    // Check if letter is in displayLetters
+    if (inputLetter && !displayLetters.has(inputLetter)) {
+      setInvalidLetter(inputLetter);
+      setTimeout(() => setInvalidLetter(''), 1500); // Clear after 1.5 seconds
+      return;
+    }
+    
     // Update grid with new value
     const newGrid = [...grid];
     newGrid[rowIndex][colIndex] = { 
       ...newGrid[rowIndex][colIndex], 
-      letter: value.toLowerCase() 
+      letter: inputLetter 
     };
     setGrid(newGrid);
     setAttempts(prev => prev + 1);
+    setInvalidLetter('');
   };
   
   // Restart the game
@@ -370,9 +352,10 @@ const GridLock = () => {
     if (!originalGrid.length) return;
     
     // Use current letterValues from ref to ensure consistency
-    const currentValues = letterValuesRef.current;
+    const currentValues = { ...letterValuesRef.current };
     
     const grouped = {};
+    const newDisplayLetters = new Set();
     
     // Initialize groups for 0-4
     for (let i = 0; i <= 4; i++) {
@@ -391,6 +374,7 @@ const GridLock = () => {
     Object.entries(currentValues).forEach(([letter, value]) => {
       if (grouped[value] !== undefined && usedLetters.has(letter)) {
         grouped[value].push(letter);
+        newDisplayLetters.add(letter);
       }
     });
     
@@ -421,7 +405,9 @@ const GridLock = () => {
       for (let j = 0; j < totalDummies && unusedLetters.length > 0; j++) {
         const dummyLetter = unusedLetters.pop();
         if (dummyLetter) {
+          // Make sure dummy letters use the same value for display and calculation
           grouped[i].push(dummyLetter);
+          newDisplayLetters.add(dummyLetter);
         }
       }
     }
@@ -432,13 +418,14 @@ const GridLock = () => {
     }
     
     setGroupedLetterValues(grouped);
+    setDisplayLetters(newDisplayLetters);
   }, [letterValues, originalGrid]);
 
   return (
     <div className="grid-lock-container">
       <div className="grid-lock-header">
         <div className="header-left">
-          <h1>GRID LOCK</h1>
+          <h1 className="ethnocentric-font">GRID LOCK</h1>
           <div className="attempts-counter">
             <span>Attempts: {attempts}</span>
           </div>
@@ -473,6 +460,12 @@ const GridLock = () => {
           <Link to="/" className="back-button">BACK</Link>
         </div>
       </div>
+      
+      {invalidLetter && (
+        <div className="invalid-letter-message">
+          <span>Letter "{invalidLetter.toUpperCase()}" is not available in this puzzle!</span>
+        </div>
+      )}
       
       <div className="game-area">
         <div className="letter-values">

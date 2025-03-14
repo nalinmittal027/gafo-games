@@ -1,6 +1,6 @@
 /* src/components/GridLock/GridLock.css */
 :root {
-  --primary-bg: #121212;
+  --primary-bg: #000000;
   --secondary-bg: #1a1a1a;
   --grid-bg: #1e1e1e;
   --cell-bg: #252525;
@@ -21,10 +21,15 @@
   --panel-bg: #1c1c1c;
 }
 
-body {
+/* Ensure entire page is black */
+html, body {
   margin: 0;
   padding: 0;
+  background-color: #000000;
+  min-height: 100vh;
+  width: 100%;
   font-family: 'Quicksand', sans-serif;
+  overflow-x: hidden;
 }
 
 .grid-lock-container {
@@ -36,6 +41,7 @@ body {
   flex-direction: column;
   max-width: 1200px;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
 /* Header */
@@ -53,12 +59,17 @@ body {
   flex-direction: column;
 }
 
-.grid-lock-header h1 {
+/* Ethnocentric font for header */
+@import url('https://fonts.cdnfonts.com/css/ethnocentric');
+
+.ethnocentric-font {
+  font-family: 'Ethnocentric', sans-serif;
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
   letter-spacing: 3px;
   color: white;
+  text-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
 }
 
 .attempts-counter {
@@ -66,6 +77,22 @@ body {
   color: var(--accent-color);
   margin-top: 5px;
   font-weight: 500;
+}
+
+/* Invalid letter message */
+.invalid-letter-message {
+  background-color: var(--error-color);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .header-controls {
@@ -93,7 +120,7 @@ body {
   border-color: var(--accent-color);
 }
 
-/* Buttons - consolidated styles */
+/* Buttons - fixed styles */
 .game-button, .back-button, .hint-button, .solution-button {
   border: none;
   padding: 8px 15px;
@@ -105,13 +132,14 @@ body {
   transition: background-color 0.2s;
   letter-spacing: 1px;
   text-decoration: none;
-  display: inline-flex; /* Changed from inline-block */
+  display: inline-flex; /* Important for alignment */
   justify-content: center; /* Center content horizontally */
   align-items: center; /* Center content vertically */
-  height: 37px; /* Consistent height for all buttons */
+  height: 37px; /* Fixed height for all buttons */
   min-width: 70px; /* Minimum width for all buttons */
   box-sizing: border-box;
   margin: 0;
+  line-height: 1; /* Critical for proper text alignment */
 }
 
 .game-button, .back-button {
@@ -152,6 +180,7 @@ body {
   flex-wrap: wrap;
   gap: 30px;
   margin-bottom: 40px;
+  position: relative; /* Important for mobile layout */
 }
 
 /* Letter Values */
@@ -495,7 +524,7 @@ body {
   color: var(--hint-color);
 }
 
-/* Responsive Adjustments - Significantly improved */
+/* Responsive Adjustments - Completely Revised */
 @media (max-width: 900px) {
   .game-area {
     flex-direction: column;
@@ -507,92 +536,104 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Mobile header */
   .grid-lock-header {
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
     align-items: flex-start;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
   }
   
+  /* Mobile size selector & controls wrapper */
   .header-controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 10px;
     width: 100%;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
-    justify-content: space-between;
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
   }
   
+  /* Make the size selector full width */
   .grid-size-selector {
+    grid-column: 1 / -1;
+    margin-bottom: 10px;
     width: 100%;
-    margin-bottom: 8px;
   }
   
   .grid-size-selector select {
     width: 100%;
+    box-sizing: border-box;
   }
   
-  /* Ensure buttons layout properly on mobile */
+  /* Button styling for mobile */
   .hint-button, .solution-button, .game-button, .back-button {
-    flex-basis: calc(50% - 4px);
+    height: 40px;
+    font-size: 0.9rem;
+    padding: 0 15px;
+    width: 100%;
+    max-width: none;
     min-width: 0;
-    width: calc(50% - 4px);
-    margin: 2px;
-    font-size: 0.8rem;
-    padding: 8px 5px;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap;
   }
   
+  /* Game area mobile layout */
   .game-area {
-    flex-direction: column;
-    margin-top: 20px; /* Add margin to prevent overlap */
+    flex-direction: column-reverse; /* Critical: Grid first, letters second */
+    margin-top: 30px;
+    gap: 30px;
   }
   
   .letter-values {
     max-width: none;
-    margin-bottom: 20px;
     width: 100%;
-    order: 1; /* Move to bottom on mobile */
+    margin-top: 20px;
+    box-sizing: border-box;
   }
   
   .grid-area {
     width: 100%;
-    order: 0; /* Move to top on mobile */
     overflow: visible;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    max-width: 100%;
   }
   
   .grid-container {
+    width: 100%;
     max-width: 100%;
     overflow-x: auto;
-    overflow-y: visible;
-    width: 100%;
+    box-sizing: border-box;
+    padding: 15px;
   }
 }
 
 @media (max-width: 480px) {
+  /* Smaller mobile */
   .grid-lock-container {
     padding: 15px 10px;
   }
   
-  .grid-lock-header h1 {
+  .ethnocentric-font {
     font-size: 2rem;
   }
   
-  .header-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-gap: 8px;
-    width: 100%;
+  .grid-cell, .row-sum, .col-sum, .empty-cell {
+    width: 40px;
+    height: 40px;
+    margin: 2px;
   }
   
-  .grid-size-selector {
-    grid-column: 1 / -1; /* Make selector span full width */
+  .grid-cell input {
+    font-size: 1.1rem;
   }
   
-  .hint-button, .solution-button, .game-button, .back-button {
-    height: 36px;
-    font-size: 0.75rem;
-    min-width: 0;
-    width: 100%;
-    margin: 0;
+  .letter-value-indicator {
+    width: 12px;
+    height: 12px;
+    font-size: 0.6rem;
   }
 }
