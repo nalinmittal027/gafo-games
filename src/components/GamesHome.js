@@ -122,7 +122,7 @@ const GamesHome = () => {
           <div key={category.id} className="game-category">
             <div className="category-header">
               <h2 className="category-title">{category.name}</h2>
-              <Link to={`/${category.id}`} className="category-explore-link">
+              <Link to={`/${category.id}-games`} className="category-explore-link">
                 Explore More
               </Link>
             </div>
