@@ -472,34 +472,84 @@ body {
   box-sizing: border-box;
 }
 
-.header-controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  height: 40px; /* Consistent height */
-}
-
+/* Then improve the mobile responsive styles at the bottom of the file */
 @media (max-width: 768px) {
   .grid-lock-header {
     flex-direction: column;
     gap: 15px;
     align-items: flex-start;
+    margin-bottom: 20px;
   }
   
   .header-controls {
     width: 100%;
     flex-wrap: wrap;
-    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  
+  .grid-size-selector {
+    margin-right: auto; /* Push to left */
+  }
+  
+  .grid-size-selector select {
+    width: 100%;
+  }
+  
+  .game-button, .back-button, .hint-button, .solution-button {
+    flex: 1;
+    min-width: 70px;
+    font-size: 0.8rem;
+    padding: 8px 5px;
+  }
+  
+  .game-area {
+    flex-direction: column;
+    margin-top: 20px; /* Add margin to prevent overlap */
+  }
+  
+  .letter-values {
+    max-width: none;
+    margin-bottom: 20px;
+  }
+  
+  .grid-container {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-lock-container {
+    padding: 15px 10px;
   }
   
   .grid-lock-header h1 {
     font-size: 2rem;
   }
   
-  .game-button, .back-button, .hint-button, .solution-button {
-    padding: 8px 10px;
-    font-size: 0.8rem;
+  .header-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
   }
+  
+  .grid-size-selector {
+    grid-column: 1 / -1; /* Make selector span full width */
+    margin-bottom: 8px;
+  }
+  
+  .game-button, .back-button, .hint-button, .solution-button {
+    font-size: 0.75rem;
+    height: 35px;
+  }
+}
+
+/* Add this style for the new hint-note class */
+.hint-note {
+  margin-top: 10px;
+  font-style: italic;
+  color: #f39c12; /* Hint color to differentiate from valid-column-note */
 }
 
 /* Add these styles to src/components/GridLock/GridLock.css */

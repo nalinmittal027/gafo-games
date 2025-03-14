@@ -26,7 +26,13 @@ const GridLock = () => {
   const [gameWon, setGameWon] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [solutionRevealed, setSolutionRevealed] = useState(false);
-  const [groupedLetterValues, setGroupedLetterValues] = useState({});
+  const [groupedLetterValues, setGroupedLetterValues] = useState({
+    0: [],
+    1: [],
+    2: [],
+    3: [],
+    4: []
+  });
   const [validColumnIndex, setValidColumnIndex] = useState(0);
   
   // Generate a valid grid with valid words (rows only)
@@ -204,11 +210,11 @@ const GridLock = () => {
     setOriginalGrid(validGrid);
     setValidColumnIndex(validColumnIndex);
     
-    // Assign random values to each letter
+    // Assign random values to each letter (changed from 0-5 to 0-4)
     const values = {};
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     for (let i = 0; i < alphabet.length; i++) {
-      values[alphabet[i]] = Math.floor(Math.random() * 6); // 0-5
+      values[alphabet[i]] = Math.floor(Math.random() * 5); // Changed from 0-5 to 0-4
     }
     setLetterValues(values);
     
@@ -341,11 +347,11 @@ const GridLock = () => {
   // Group letter values whenever letterValues or originalGrid changes
   useEffect(() => {
     if (!originalGrid.length) return;
-
+  
     const grouped = {};
     
-    // Initialize groups for 0-5
-    for (let i = 0; i <= 5; i++) {
+    // Initialize groups for 0-4
+    for (let i = 0; i <= 4; i++) {
       grouped[i] = [];
     }
     
@@ -359,13 +365,45 @@ const GridLock = () => {
     
     // Group used letters by their values
     Object.entries(letterValues).forEach(([letter, value]) => {
-      if (grouped[value] && usedLetters.has(letter)) {
+      if (grouped[value] !== undefined && usedLetters.has(letter)) {
         grouped[value].push(letter);
       }
     });
     
+    // Add dummy letters to ensure each value has at least 2 letters
+    // and to introduce some confusion for players
+    const unusedLetters = [];
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(97 + i); // a-z
+      if (!usedLetters.has(letter)) {
+        unusedLetters.push(letter);
+      }
+    }
+    
+    // Shuffle unused letters for random selection
+    unusedLetters.sort(() => Math.random() - 0.5);
+    
+    // Add dummy letters to ensure each value has at least 2 letters
+    for (let i = 0; i <= 4; i++) {
+      // If a value group has less than 2 letters, add dummy letters
+      const neededLetters = Math.max(0, 2 - grouped[i].length);
+      
+      // Also add 1-2 random dummy letters to some groups to create confusion
+      const extraLetters = Math.random() < 0.4 ? 1 : 0; // 40% chance to add an extra letter
+      
+      const totalDummies = neededLetters + extraLetters;
+      
+      // Add dummy letters if we have enough unused letters
+      for (let j = 0; j < totalDummies && unusedLetters.length > 0; j++) {
+        const dummyLetter = unusedLetters.pop();
+        if (dummyLetter) {
+          grouped[i].push(dummyLetter);
+        }
+      }
+    }
+    
     // Sort letters within each group
-    for (let i = 0; i <= 5; i++) {
+    for (let i = 0; i <= 4; i++) {
       grouped[i] = grouped[i].sort();
     }
     
@@ -519,7 +557,7 @@ const GridLock = () => {
         <ul>
           <li>Fill in the grid with letters to form valid words in each row</li>
           <li>The sum of each row and column must match the numbers shown</li>
-          <li>Each letter has a numerical value (0-5) shown in the left panel</li>
+          <li>Each letter has a numerical value (0-4) shown in the left panel</li>
           <li>Use the revealed letters in the top-left and bottom-right as clues</li>
           <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
         </ul>
