@@ -1,5 +1,5 @@
 // src/components/GridLock/GridLock.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './GridLock.css';
 
@@ -15,6 +15,9 @@ const wordDictionaries = {
 };
 
 const GridLock = () => {
+  // Use a ref to store the current letterValues to prevent stale closures
+  const letterValuesRef = useRef({});
+  
   const [gridSize, setGridSize] = useState(3);
   const [grid, setGrid] = useState([]);
   const [originalGrid, setOriginalGrid] = useState([]);
@@ -34,6 +37,11 @@ const GridLock = () => {
     4: []
   });
   const [validColumnIndex, setValidColumnIndex] = useState(0);
+  
+  // Update letterValuesRef whenever letterValues changes
+  useEffect(() => {
+    letterValuesRef.current = letterValues;
+  }, [letterValues]);
   
   // Generate a valid grid with valid words (rows only)
   const generateValidGrid = (size) => {
@@ -182,9 +190,12 @@ const GridLock = () => {
   
   // Calculate if row totals match expected values
   const calculateRowMatches = () => {
+    const currentValues = letterValuesRef.current;
+    
     return rowSums.map((expectedSum, rowIndex) => {
       const currentSum = grid[rowIndex].reduce((sum, cell) => {
-        return sum + (cell.letter ? letterValues[cell.letter] || 0 : 0);
+        const value = cell.letter ? currentValues[cell.letter] || 0 : 0;
+        return sum + value;
       }, 0);
       return currentSum === expectedSum;
     });
@@ -192,10 +203,13 @@ const GridLock = () => {
   
   // Calculate if column totals match expected values
   const calculateColumnMatches = () => {
+    const currentValues = letterValuesRef.current;
+    
     return colSums.map((expectedSum, colIndex) => {
       let currentSum = 0;
       for (let i = 0; i < grid.length; i++) {
-        currentSum += grid[i][colIndex].letter ? letterValues[grid[i][colIndex].letter] || 0 : 0;
+        const value = grid[i][colIndex].letter ? currentValues[grid[i][colIndex].letter] || 0 : 0;
+        currentSum += value;
       }
       return currentSum === expectedSum;
     });
@@ -205,24 +219,28 @@ const GridLock = () => {
   const generateNewGame = (size) => {
     const newGridSize = size || gridSize;
     
-    // Generate grid with valid rows and at least one valid column
+    // First, generate grid with valid rows and at least one valid column
     const { grid: validGrid, validColumnIndex } = generateValidGridWithColumns(newGridSize);
-    setOriginalGrid(validGrid);
-    setValidColumnIndex(validColumnIndex);
     
-    // Assign random values to each letter (0-4)
+    // Then, assign random values to each letter (0-4)
     const values = {};
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     for (let i = 0; i < alphabet.length; i++) {
+      // Use a consistent random seed method
       values[alphabet[i]] = Math.floor(Math.random() * 5); // 0-4
     }
     
-    // Store the letter values first before calculating sums
-    setLetterValues(values);
-    
-    // Calculate row and column sums
+    // Calculate row and column sums using these values
     const rSums = calculateRowSums(validGrid, values);
     const cSums = calculateColumnSums(validGrid, values);
+    
+    // Update the ref first to ensure consistent access
+    letterValuesRef.current = values;
+    
+    // Set all the state in a logical order
+    setLetterValues(values);
+    setOriginalGrid(validGrid);
+    setValidColumnIndex(validColumnIndex);
     setRowSums(rSums);
     setColSums(cSums);
     
@@ -325,7 +343,8 @@ const GridLock = () => {
   // Initialize game
   useEffect(() => {
     generateNewGame(gridSize);
-  }, [gridSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   // Check win condition whenever grid changes
   useEffect(() => {
@@ -349,7 +368,10 @@ const GridLock = () => {
   // Group letter values whenever letterValues or originalGrid changes
   useEffect(() => {
     if (!originalGrid.length) return;
-  
+    
+    // Use current letterValues from ref to ensure consistency
+    const currentValues = letterValuesRef.current;
+    
     const grouped = {};
     
     // Initialize groups for 0-4
@@ -366,7 +388,7 @@ const GridLock = () => {
     });
     
     // Group used letters by their values
-    Object.entries(letterValues).forEach(([letter, value]) => {
+    Object.entries(currentValues).forEach(([letter, value]) => {
       if (grouped[value] !== undefined && usedLetters.has(letter)) {
         grouped[value].push(letter);
       }
@@ -511,8 +533,8 @@ const GridLock = () => {
                       />
                       {(cell.letter || solutionRevealed) && (
                         <span className="letter-value-indicator">
-                          {letterValues[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] !== undefined 
-                            ? letterValues[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] 
+                          {letterValuesRef.current[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] !== undefined 
+                            ? letterValuesRef.current[solutionRevealed ? originalGrid[rowIndex][colIndex] : cell.letter] 
                             : '?'}
                         </span>
                       )}
@@ -555,21 +577,21 @@ const GridLock = () => {
       )}
       
       <div className="game-instructions">
-  <h3>HOW TO PLAY</h3>
-  <ul>
-    <li>Fill in the grid with letters to form valid words in each row</li>
-    <li>The sum of each row and column must match the numbers shown</li>
-    <li>Each letter has a numerical value (0-4) shown in the left panel</li>
-    <li>Use the revealed letters in the top-left and bottom-right as clues</li>
-    <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
-  </ul>
-  <p className="valid-column-note">
-    <strong>Bonus:</strong> One column (marked with ▲) will also form a valid word!
-  </p>
-  <p className="hint-note">
-    <strong>Tip:</strong> Not all letters shown in the values panel are used in the grid!
-  </p>
-</div>
+        <h3>HOW TO PLAY</h3>
+        <ul>
+          <li>Fill in the grid with letters to form valid words in each row</li>
+          <li>The sum of each row and column must match the numbers shown</li>
+          <li>Each letter has a numerical value (0-4) shown in the left panel</li>
+          <li>Use the revealed letters in the top-left and bottom-right as clues</li>
+          <li>Need help? Use the HINT button to reveal another letter (adds 2 to your attempts)</li>
+        </ul>
+        <p className="valid-column-note">
+          <strong>Bonus:</strong> One column (marked with ▲) will also form a valid word!
+        </p>
+        <p className="hint-note">
+          <strong>Tip:</strong> Not all letters shown in the values panel are used in the grid!
+        </p>
+      </div>
     </div>
   );
 };

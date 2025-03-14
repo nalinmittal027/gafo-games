@@ -93,6 +93,7 @@ body {
   border-color: var(--accent-color);
 }
 
+/* Buttons - consolidated styles */
 .game-button, .back-button, .hint-button, .solution-button {
   border: none;
   padding: 8px 15px;
@@ -104,8 +105,13 @@ body {
   transition: background-color 0.2s;
   letter-spacing: 1px;
   text-decoration: none;
-  display: inline-block;
-  text-align: center;
+  display: inline-flex; /* Changed from inline-block */
+  justify-content: center; /* Center content horizontally */
+  align-items: center; /* Center content vertically */
+  height: 37px; /* Consistent height for all buttons */
+  min-width: 70px; /* Minimum width for all buttons */
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .game-button, .back-button {
@@ -442,118 +448,7 @@ body {
   line-height: 1.5;
 }
 
-/* Responsive Adjustments */
-@media (max-width: 900px) {
-  .game-area {
-    flex-direction: column;
-  }
-  
-  .letter-values {
-    max-width: none;
-  }
-}
-
-.game-button, .back-button, .hint-button, .solution-button {
-  border: none;
-  padding: 8px 15px;
-  border-radius: 4px;
-  font-family: 'Quicksand', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  letter-spacing: 1px;
-  text-decoration: none;
-  display: inline-flex; /* Changed from inline-block */
-  justify-content: center; /* Center content horizontally */
-  align-items: center; /* Center content vertically */
-  height: 37px; /* Consistent height for all buttons */
-  min-width: 70px; /* Minimum width for all buttons */
-  box-sizing: border-box;
-}
-
-/* Then improve the mobile responsive styles at the bottom of the file */
-@media (max-width: 768px) {
-  .grid-lock-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-    margin-bottom: 20px;
-  }
-  
-  .header-controls {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  
-  .grid-size-selector {
-    margin-right: auto; /* Push to left */
-  }
-  
-  .grid-size-selector select {
-    width: 100%;
-  }
-  
-  .game-button, .back-button, .hint-button, .solution-button {
-    flex: 1;
-    min-width: 70px;
-    font-size: 0.8rem;
-    padding: 8px 5px;
-  }
-  
-  .game-area {
-    flex-direction: column;
-    margin-top: 20px; /* Add margin to prevent overlap */
-  }
-  
-  .letter-values {
-    max-width: none;
-    margin-bottom: 20px;
-  }
-  
-  .grid-container {
-    max-width: 100%;
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .grid-lock-container {
-    padding: 15px 10px;
-  }
-  
-  .grid-lock-header h1 {
-    font-size: 2rem;
-  }
-  
-  .header-controls {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
-  }
-  
-  .grid-size-selector {
-    grid-column: 1 / -1; /* Make selector span full width */
-    margin-bottom: 8px;
-  }
-  
-  .game-button, .back-button, .hint-button, .solution-button {
-    font-size: 0.75rem;
-    height: 35px;
-  }
-}
-
-/* Add this style for the new hint-note class */
-.hint-note {
-  margin-top: 10px;
-  font-style: italic;
-  color: #f39c12; /* Hint color to differentiate from valid-column-note */
-}
-
-/* Add these styles to src/components/GridLock/GridLock.css */
-
+/* Valid column styles */
 .grid-cell.valid-column {
   border-bottom-color: var(--accent-color);
   border-bottom-width: 2px;
@@ -587,9 +482,117 @@ body {
   100% { opacity: 0.6; transform: translateY(0); }
 }
 
-/* Also add a style for the game instructions to mention the valid column */
+/* Note styles */
 .valid-column-note {
   margin-top: 10px;
   font-style: italic;
   color: var(--accent-color);
+}
+
+.hint-note {
+  margin-top: 10px;
+  font-style: italic;
+  color: var(--hint-color);
+}
+
+/* Responsive Adjustments - Significantly improved */
+@media (max-width: 900px) {
+  .game-area {
+    flex-direction: column;
+  }
+  
+  .letter-values {
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-lock-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  
+  .header-controls {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+    justify-content: space-between;
+  }
+  
+  .grid-size-selector {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .grid-size-selector select {
+    width: 100%;
+  }
+  
+  /* Ensure buttons layout properly on mobile */
+  .hint-button, .solution-button, .game-button, .back-button {
+    flex-basis: calc(50% - 4px);
+    min-width: 0;
+    width: calc(50% - 4px);
+    margin: 2px;
+    font-size: 0.8rem;
+    padding: 8px 5px;
+  }
+  
+  .game-area {
+    flex-direction: column;
+    margin-top: 20px; /* Add margin to prevent overlap */
+  }
+  
+  .letter-values {
+    max-width: none;
+    margin-bottom: 20px;
+    width: 100%;
+    order: 1; /* Move to bottom on mobile */
+  }
+  
+  .grid-area {
+    width: 100%;
+    order: 0; /* Move to top on mobile */
+    overflow: visible;
+    margin-bottom: 20px;
+  }
+  
+  .grid-container {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-lock-container {
+    padding: 15px 10px;
+  }
+  
+  .grid-lock-header h1 {
+    font-size: 2rem;
+  }
+  
+  .header-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-gap: 8px;
+    width: 100%;
+  }
+  
+  .grid-size-selector {
+    grid-column: 1 / -1; /* Make selector span full width */
+  }
+  
+  .hint-button, .solution-button, .game-button, .back-button {
+    height: 36px;
+    font-size: 0.75rem;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+  }
 }
