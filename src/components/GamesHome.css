@@ -1,9 +1,11 @@
 /* src/components/GamesHome.css */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Quicksand', sans-serif;
-  background-color: #f5f7fa;
+  font-family: 'Nunito', sans-serif;
+  background-color: #f8f9fa;
   color: #333;
 }
 
@@ -21,37 +23,58 @@ body {
   justify-content: center;
   align-items: center;
   text-align: center;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #f2f8ff 100%);
   position: relative;
   padding: 0 5%;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233498db' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.8;
+  z-index: 0;
 }
 
 .gafo-title {
   font-size: 7rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  background: linear-gradient(45deg, #3498db, #2196f3, #1565c0);
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(45deg, #ff7e5f, #feb47b);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   letter-spacing: 8px;
-  text-shadow: 0 0 20px rgba(52, 152, 219, 0.2);
+  text-shadow: 0 0 20px rgba(255, 126, 95, 0.2);
+  position: relative;
+  z-index: 1;
 }
 
 .gafo-tagline {
   font-size: 1.8rem;
   margin-top: 10px;
-  color: #555;
-  font-weight: 500;
+  color: #5a6c8f;
+  font-weight: 700;
   letter-spacing: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .gafo-hook {
   max-width: 700px;
   margin: 30px auto 0;
   font-size: 1.2rem;
-  line-height: 1.5;
-  color: #666;
+  line-height: 1.6;
+  color: #5d6a7f;
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
 }
 
 .scroll-arrow-container {
@@ -68,7 +91,9 @@ body {
 
 .scroll-arrow {
   font-size: 2.5rem;
-  color: #3498db;
+  color: #ff7e5f;
+  position: relative;
+  z-index: 1;
 }
 
 @keyframes bounce {
@@ -86,7 +111,20 @@ body {
 /* Games Section */
 .games-section {
   padding: 80px 5%;
-  background-color: #f5f7fa;
+  background-color: #fff;
+  position: relative;
+}
+
+.games-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%233498db' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: 0;
 }
 
 .game-category {
@@ -106,6 +144,9 @@ body {
   padding-bottom: 15px;
   color: #2c3e50;
   margin: 0;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+  z-index: 1;
 }
 
 .category-title:after {
@@ -115,21 +156,24 @@ body {
   left: 0;
   width: 80px;
   height: 4px;
-  background-color: #3498db;
+  background: linear-gradient(90deg, #ff7e5f, #feb47b);
+  border-radius: 4px;
 }
 
 .category-explore-link {
   font-size: 1.1rem;
-  color: #3498db;
+  color: #ff7e5f;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 700;
   display: flex;
   align-items: center;
   transition: color 0.3s;
+  z-index: 1;
+  position: relative;
 }
 
 .category-explore-link:hover {
-  color: #2980b9;
+  color: #feb47b;
 }
 
 .category-explore-link:after {
@@ -154,7 +198,7 @@ body {
 }
 
 .game-card {
-  background-color: #ffffff;
+  background-color: #fcf0e8;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
@@ -165,6 +209,8 @@ body {
   flex-direction: column;
   height: 100%;
   flex: 1;
+  position: relative;
+  z-index: 1;
 }
 
 .game-card:hover {
@@ -198,32 +244,36 @@ body {
 .game-title {
   font-size: 1.5rem;
   margin: 0 0 12px 0;
-  color: #2c3e50;
-  font-weight: 700;
+  color: #ff7e5f;
+  font-weight: 800;
+  font-family: 'Poppins', sans-serif;
+  letter-spacing: 0.5px;
 }
 
 .game-description {
   font-size: 1rem;
   margin: 0 0 25px 0;
   flex-grow: 1;
-  color: #666;
+  color: #5a6c8f;
   line-height: 1.5;
+  font-weight: 600;
 }
 
 .game-cta {
   align-self: flex-start;
   padding: 10px 20px;
-  background-color: #3498db;
+  background: linear-gradient(90deg, #ff7e5f, #feb47b);
   color: white;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 6px;
   font-size: 0.95rem;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.3s;
+  box-shadow: 0 4px 10px rgba(255, 126, 95, 0.2);
 }
 
 .game-card:hover .game-cta {
-  background-color: #2980b9;
-  transform: scale(1.05);
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 6px 15px rgba(255, 126, 95, 0.3);
 }
 
 /* Buy physical button */
@@ -231,34 +281,56 @@ body {
   margin-top: 15px;
   text-align: center;
   padding: 12px;
-  background-color: #e67e22;
+  background-color: #5a6c8f;
   color: white;
   text-decoration: none;
   border-radius: 6px;
-  font-weight: 600;
-  transition: background-color 0.3s;
+  font-weight: 700;
+  transition: all 0.3s;
   font-size: 0.95rem;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgba(90, 108, 143, 0.2);
 }
 
 .buy-physical-button:hover {
-  background-color: #d35400;
+  background-color: #4a5b7f;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(90, 108, 143, 0.3);
 }
 
 /* Buy games CTA section */
 .buy-games-cta {
   margin-top: 60px;
-  background: linear-gradient(135deg, #f39c12, #e67e22);
-  border-radius: 12px;
+  background: linear-gradient(135deg, #ff7e5f, #feb47b);
+  border-radius: 16px;
   padding: 40px;
   text-align: center;
   color: white;
-  box-shadow: 0 10px 25px rgba(230, 126, 34, 0.3);
+  box-shadow: 0 10px 25px rgba(255, 126, 95, 0.25);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.buy-games-cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: -1;
 }
 
 .buy-games-cta h3 {
   font-size: 1.8rem;
   margin: 0 0 25px 0;
-  font-weight: 600;
+  font-weight: 700;
+  font-family: 'Poppins', sans-serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .buy-options {
@@ -271,65 +343,122 @@ body {
   padding: 15px 30px;
   border-radius: 8px;
   text-decoration: none;
-  font-weight: 600;
-  transition: transform 0.3s, background-color 0.3s;
+  font-weight: 700;
+  transition: transform 0.3s, box-shadow 0.3s;
   display: inline-block;
   font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.buy-option::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: rgba(0,0,0,0.1);
+  transition: transform 0.3s;
+  transform: translateY(0);
 }
 
 .buy-option.nightingame {
   background-color: white;
-  color: #e67e22;
+  color: #ff7e5f;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .buy-option.amazon {
-  background-color: #2c3e50;
+  background-color: #232f3e;
   color: white;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
 .buy-option:hover {
   transform: translateY(-3px);
 }
 
+.buy-option:hover::after {
+  transform: translateY(5px);
+}
+
 .buy-option.nightingame:hover {
-  background-color: #f7f7f7;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .buy-option.amazon:hover {
-  background-color: #1a2530;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Footer */
 .games-home-footer {
-  background-color: #2c3e50;
+  background-color: #5a6c8f;
   padding: 40px 5%;
   margin-top: auto;
-  color: #ecf0f1;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+.games-home-footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  z-index: 0;
 }
 
 .games-home-footer p {
   margin: 0 0 20px 0;
-  opacity: 0.8;
   font-size: 0.95rem;
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.5px;
 }
 
 .footer-links {
   display: flex;
   flex-wrap: wrap;
   gap: 25px;
+  position: relative;
+  z-index: 1;
 }
 
 .footer-links a {
-  color: #ecf0f1;
+  color: #fff;
   text-decoration: none;
   font-size: 0.95rem;
-  opacity: 0.8;
-  transition: opacity 0.3s, transform 0.3s;
+  font-weight: 600;
+  transition: all 0.3s;
+  position: relative;
+  padding: 2px 0;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #fff;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
 }
 
 .footer-links a:hover {
-  opacity: 1;
   transform: translateY(-2px);
+}
+
+.footer-links a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
 }
 
 /* Responsive Adjustments */

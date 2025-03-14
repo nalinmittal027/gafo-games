@@ -14,11 +14,11 @@ const GamesHome = () => {
     });
   };
 
-  // Add Quicksand font to the document head
+  // Add Nunito & Poppins fonts to the document head
   useEffect(() => {
-    // Create link element for Quicksand font
+    // Create link element for fonts
     const link = document.createElement('link');
-    link.href = 'https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap';
+    link.href = 'https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap';
     link.rel = 'stylesheet';
     
     // Add to head
