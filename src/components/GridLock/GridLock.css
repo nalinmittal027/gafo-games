@@ -344,9 +344,17 @@ body {
   border-color: var(--accent-color);
 }
 
+/* Solution cell styling - ensure this doesn't conflict with other styles */
 .grid-cell.solution {
   background-color: var(--solution-cell-bg);
   border-color: var(--success-color);
+}
+
+/* Make sure revealed solution cells are still visible */
+.grid-cell.revealed.solution,
+.grid-cell.solution.revealed {
+  background-color: var(--revealed-cell-bg);
+  border-color: var(--accent-color);
 }
 
 .grid-cell input {

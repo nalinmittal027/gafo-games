@@ -399,17 +399,19 @@ const GridLock = () => {
   
   // Reveal the solution
   const revealSolution = () => {
-    // Create a new grid with all cells filled but only marking first column as "revealed"
-    const solutionGrid = originalGrid.map((row, i) => {
-      return row.map((letter, j) => {
-        if (letter) {
+    // Use the existing grid structure but fill in all the letters from originalGrid
+    const solutionGrid = grid.map((row, i) => {
+      return row.map((cell, j) => {
+        if (!cell) return null; // Keep null cells as null
+        
+        // If cell exists in the grid, just fill in the correct letter from originalGrid
+        if (originalGrid[i] && originalGrid[i][j]) {
           return {
-            letter: letter,
-            revealed: j === 0 || (grid[i][j] && grid[i][j].revealed) // Mark first column and already revealed cells
+            ...cell, // Keep all other properties
+            letter: originalGrid[i][j] // Update the letter from solution
           };
-        } else {
-          return null; // Empty cell
         }
+        return cell; // Keep as is if there's no matching letter in originalGrid
       });
     });
     
@@ -554,7 +556,10 @@ const GridLock = () => {
                     return (
                       <div 
                         key={colIndex} 
-                        className={`grid-cell ${cell.revealed ? 'revealed' : ''} ${solutionRevealed && !cell.revealed ? 'solution' : ''} ${colIndex === 0 ? 'first-column' : ''}`}
+                        className={`grid-cell 
+                          ${cell.revealed ? 'revealed' : ''} 
+                          ${solutionRevealed ? 'solution' : ''} 
+                          ${colIndex === 0 ? 'first-column' : ''}`}
                       >
                         <input
                           type="text"
@@ -562,7 +567,7 @@ const GridLock = () => {
                           value={cell.letter}
                           onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                           disabled={colIndex === 0 || cell.revealed || gameWon || solutionRevealed}
-                          className={colIndex === 0 || cell.revealed ? 'revealed-input' : ''}
+                          className={colIndex === 0 || cell.revealed || solutionRevealed ? 'revealed-input' : ''}
                         />
                         {cell.letter && (
                           <span className="letter-value-indicator">
