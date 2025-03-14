@@ -74,15 +74,15 @@ const GamesHome = () => {
           disabled: false
         },
         {
-          id: 'singleplayer-coming-soon-1',
-          name: 'Coming Soon',
-          description: 'A new brain-teasing solo challenge is in development!',
-          thumbnail: '/images/coming-soon.jpg',
-          route: '#',
-          disabled: true
+          id: 'treasure-rift',
+          name: 'Treasure Rift',
+          description: 'Navigate through dangerous waters, avoid pirates, and use clues to find the hidden treasure!',
+          thumbnail: '/images/treasure-rift-thumbnail.jpg',
+          route: '/treasure-rift',
+          disabled: false
         },
         {
-          id: 'singleplayer-coming-soon-2',
+          id: 'singleplayer-coming-soon-1',
           name: 'Coming Soon',
           description: 'Get ready for another immersive single-player experience!',
           thumbnail: '/images/coming-soon.jpg',

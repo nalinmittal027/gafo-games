@@ -5,6 +5,7 @@ import ChappalLanding from './components/ChappalLanding';
 import Home from './components/Home';
 import Game from './components/Game';
 import GridLock from './components/GridLock/GridLock';
+import TreasureRift from './components/TreasureRift/TreasureRift';
 import './App.css';
 
 function App() {
@@ -22,6 +23,9 @@ function App() {
           
           {/* Grid Lock Route */}
           <Route path="/grid-lock" element={<GridLock />} />
+          
+          {/* Treasure Rift Route */}
+          <Route path="/treasure-rift" element={<TreasureRift />} />
           
           {/* Redirect any other paths to the homepage */}
           <Route path="*" element={<Navigate to="/" replace />} />
