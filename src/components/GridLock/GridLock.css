@@ -73,7 +73,7 @@ body {
 }
 
 .game-title {
-  font-family: 'Quicksand', sans-serif;
+  font-family: 'Orbitron', sans-serif;
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
@@ -119,7 +119,7 @@ body {
 
 .difficulty-selector select {
   background-color: var(--cell-bg);
-  color: var(--text-color);
+  color: white;
   border: 1px solid var(--cell-border);
   padding: 8px 15px;
   border-radius: 4px;
@@ -305,6 +305,7 @@ body {
   border-radius: 4px;
   font-weight: 600;
   margin-right: 10px;
+  font-family: 'Orbitron', sans-serif;
 }
 
 .letters-cells {
@@ -320,6 +321,7 @@ body {
   text-transform: uppercase;
   font-weight: 600;
   font-size: 0.9rem;
+  font-family: 'Orbitron', sans-serif;
 }
 
 /* Remaining Letters - redesigned & repositioned (now inside grid-area) */
@@ -349,6 +351,7 @@ body {
   font-weight: 700;
   color: var(--accent-color);
   margin-left: 10px;
+  font-family: 'Orbitron', sans-serif;
 }
 
 /* Grid Area */
@@ -391,6 +394,7 @@ body {
   font-size: 1.1rem;
   border-radius: 4px;
   margin: 2px;
+  font-family: 'Orbitron', sans-serif;
 }
 
 .col-sum.matched, .row-sum.matched {
@@ -448,7 +452,7 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   text-transform: uppercase;
-  font-family: 'Quicksand', sans-serif;
+  font-family: 'Orbitron', sans-serif;
   background: transparent;
   color: white;
   cursor: pointer;
@@ -477,6 +481,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  font-family: 'Orbitron', sans-serif;
 }
 
 /* Win Message */
@@ -564,7 +569,7 @@ body {
   position: relative;
   padding-bottom: 8px;
   margin-bottom: 12px;
-  font-family: 'Quicksand', sans-serif;
+  font-family: 'Orbitron', sans-serif;
 }
 
 .game-instructions h3:after {
@@ -587,6 +592,7 @@ body {
   color: var(--muted-text);
   line-height: 1.4;
   font-size: 0.95rem;
+  font-family: 'Orbitron', sans-serif;
 }
 
 /* Responsive Adjustments */

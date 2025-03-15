@@ -264,9 +264,45 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.cell.hidden:hover, .cell.marked:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+.cell.highlighted {
+  box-shadow: 0 0 0 3px rgba(255, 235, 59, 0.7);
+  position: relative;
+  z-index: 5;
+}
+
+.cell.highlighted::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 235, 59, 0.2);
+  border-radius: 8px;
+  z-index: -1;
+}
+
+.cell.diagonal {
+  position: relative;
+  z-index: 5;
+}
+
+.cell.diagonal::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent, rgba(255, 152, 0, 0.3), transparent);
+  border-radius: 8px;
+  z-index: -1;
+  animation: pulse-diagonal 2s infinite alternate;
+}
+
+@keyframes pulse-diagonal {
+  from { opacity: 0.5; }
+  to { opacity: 1; }
 }
 
 .cell.empty {
