@@ -34,9 +34,9 @@ const SingleplayerGames = () => {
       description: 'A never-ending challenge of patterns and loops.',
       thumbnail: '/images/mobius-thumbnail.jpg',
       route: '/mobius',
-      detailedDescription: 'Inspired by the endless Möbius strip, this puzzle game challenges players to create and connect patterns that loop infinitely. With increasing complexity across levels, Mobius offers a visually stunning and intellectually stimulating experience.',
+      detailedDescription: 'Based on the endless Möbius strip concept, Mobius challenges you to balance a loop of numbers where every change affects its neighbors. With special power-ups and increasing complexity, it offers a visually stunning and intellectually stimulating experience.',
       difficulty: 'Easy to Expert',
-      playTime: '10-20 minutes per level',
+      playTime: '2-10 minutes per puzzle',
       ageRange: '8+'
     }
   ];

@@ -1,3 +1,4 @@
+// src/App.js
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import GamesHome from './components/GamesHome';
@@ -6,6 +7,7 @@ import Home from './components/Home';
 import Game from './components/Game';
 import GridLock from './components/GridLock/GridLock';
 import TreasureRift from './components/TreasureRift/TreasureRift';
+import Mobius from './components/Mobius/Mobius';
 import MultiplayerGames from './components/MultiplayerGames';
 import SingleplayerGames from './components/SingleplayerGames';
 import './App.css';
@@ -27,17 +29,15 @@ function App() {
           <Route path="/chappal-home" element={<Home />} />
           <Route path="/game/:gameId" element={<Game />} />
           
-          {/* Grid Lock Route */}
+          {/* Singleplayer Game Routes */}
           <Route path="/grid-lock" element={<GridLock />} />
-          
-          {/* Treasure Rift Route */}
           <Route path="/treasure-rift" element={<TreasureRift />} />
+          <Route path="/mobius" element={<Mobius />} />
           
-          {/* Game-specific routes can be added here */}
+          {/* Multiplayer Game Routes (placeholders) */}
           <Route path="/sangram" element={<Navigate to="/" replace />} /> {/* Placeholder - update when component exists */}
           <Route path="/shortcut-longcut" element={<Navigate to="/" replace />} /> {/* Placeholder - update when component exists */}
           <Route path="/true-wizard" element={<Navigate to="/" replace />} /> {/* Placeholder - update when component exists */}
-          <Route path="/mobius" element={<Navigate to="/" replace />} /> {/* Placeholder - update when component exists */}
           
           {/* Redirect any other paths to the homepage */}
           <Route path="*" element={<Navigate to="/" replace />} />
