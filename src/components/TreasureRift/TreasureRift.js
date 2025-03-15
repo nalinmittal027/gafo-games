@@ -3,7 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 // Utilities
-import { GRID_SIZE, MAX_EXPLORATIONS, revealCell, checkMapCompassAlignment, createDiagonalLine } from './utils/gameLogic';
+import { 
+  GRID_SIZE, 
+  MAX_EXPLORATIONS, 
+  revealCell, 
+  checkMapCompassAlignment, 
+  createDiagonalLine,
+  isRevealed,
+  isMarked
+} from './utils/gameLogic';
 import { generateDeepOceanSections, placeObstacles, createInitialBoard, placeGameElements } from './utils/boardGenerator';
 import * as clueGenerator from './utils/clueGenerator';
 
