@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './GridLock.css';
-import { FaRedo, FaArrowLeft } from 'react-icons/fa';
 
 // Word dictionaries for different word lengths
 const wordDictionaries = {
@@ -642,7 +641,7 @@ const GridLock = () => {
           </button>
           
           <Link to="/" className="back-link">
-            <FaArrowLeft />
+            ←
           </Link>
         </div>
       </div>
@@ -785,11 +784,6 @@ const GridLock = () => {
       </div>
     </div>
   );
-};
-
-// Missing function: Restart Game
-const restartGame = () => {
-  generateNewGame(difficulty);
 };
 
 export default GridLock;
