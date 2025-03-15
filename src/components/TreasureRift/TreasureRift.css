@@ -1,4 +1,27 @@
-/* src/components/TreasureRift/TreasureRift.css */
+.cell.marked {
+  background: linear-gradient(145deg, #ffcdd2, #ef9a9a);
+  color: #b71c1c;
+  font-size: 22px;
+  position: relative;
+}
+
+.cell.marked::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.1) 5px,
+    rgba(255, 205, 210, 0.3) 5px,
+    rgba(255, 205, 210, 0.3) 10px
+  );
+  border-radius: 8px;
+  z-index: 1;
+}/* src/components/TreasureRift/TreasureRift.css */
 :root {
   --primary-color: #f8b195;
   --secondary-color: #f67280;
@@ -241,7 +264,7 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-.cell.hidden:hover {
+.cell.hidden:hover, .cell.marked:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
 }

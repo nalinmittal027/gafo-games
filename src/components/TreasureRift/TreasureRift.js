@@ -23,12 +23,22 @@ const TreasureRift = () => {
     treasure: { x: 0, y: 0 },
   });
   const [revealedCells, setRevealedCells] = useState([]);
+  const [markedCells, setMarkedCells] = useState([]);
   const [explorationsLeft, setExplorationsLeft] = useState(MAX_EXPLORATIONS);
   const [score, setScore] = useState(0);
+  const [clickTimeout, setClickTimeout] = useState(null);
+  const [isLongPress, setIsLongPress] = useState(false);
 
   // Initialize the game
   useEffect(() => {
     initializeGame();
+    
+    // Clean up any timeouts on unmount
+    return () => {
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+      }
+    };
   }, []);
 
   const initializeGame = () => {
@@ -38,6 +48,7 @@ const TreasureRift = () => {
     setMessage('Find the hidden treasure while conserving your explorations!');
     setPirateEncounters(0);
     setRevealedCells([]);
+    setMarkedCells([]);
     setExplorationsLeft(MAX_EXPLORATIONS);
     setScore(0);
 
@@ -258,10 +269,66 @@ const TreasureRift = () => {
   };
 
   const handleCellClick = (x, y) => {
-    if (gameStatus !== 'playing' || isRevealed(x, y)) {
+    if (gameStatus !== 'playing') {
       return;
     }
-
+    
+    // Handle double click (reveal)
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      setClickTimeout(null);
+      
+      // Double click - reveal the cell if not already revealed
+      if (!isRevealed(x, y)) {
+        revealCell(x, y);
+      }
+      return;
+    }
+    
+    // Single click - set timeout to detect if it's a single or double click
+    const timeout = setTimeout(() => {
+      // Single click - toggle mark
+      if (!isRevealed(x, y)) {
+        toggleMark(x, y);
+      }
+      setClickTimeout(null);
+    }, 300); // 300ms delay to detect double click
+    
+    setClickTimeout(timeout);
+  };
+  
+  const handleCellLongPress = (x, y, e) => {
+    e.preventDefault(); // Prevent context menu on right click
+    
+    if (gameStatus !== 'playing') {
+      return;
+    }
+    
+    // If the cell is marked, remove the mark
+    if (isMarked(x, y)) {
+      const newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
+      setMarkedCells(newMarkedCells);
+    }
+    
+    setIsLongPress(true);
+  };
+  
+  const toggleMark = (x, y) => {
+    if (isMarked(x, y)) {
+      // Remove mark
+      const newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
+      setMarkedCells(newMarkedCells);
+    } else {
+      // Add mark
+      setMarkedCells([...markedCells, { x, y }]);
+    }
+  };
+  
+  const revealCell = (x, y) => {
+    if (isRevealed(x, y)) {
+      return;
+    }
+    
     // Decrement explorations left
     const newExplorationsLeft = explorationsLeft - 1;
     setExplorationsLeft(newExplorationsLeft);
@@ -269,6 +336,12 @@ const TreasureRift = () => {
     // Create a copy of revealed cells
     const newRevealedCells = [...revealedCells, { x, y }];
     setRevealedCells(newRevealedCells);
+    
+    // Remove any mark on this cell
+    if (isMarked(x, y)) {
+      const newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
+      setMarkedCells(newMarkedCells);
+    }
 
     // Get the cell content
     const cell = board[y][x];
@@ -372,16 +445,25 @@ const TreasureRift = () => {
 
   const isRevealed = (x, y) => {
     // Rocks and ocean current are always considered revealed
-    const cell = board[y][x];
+    const cell = board[y] && board[y][x];
     if (cell && (cell.type === 'rock' || cell.type === 'oceanCurrent')) {
       return true;
     }
     return revealedCells.some(cell => cell.x === x && cell.y === y);
   };
+  
+  const isMarked = (x, y) => {
+    return markedCells.some(cell => cell.x === x && cell.y === y);
+  };
 
   const getCellClassName = (x, y) => {
-    const cell = board[y][x];
+    const cell = board[y] && board[y][x];
     const revealed = isRevealed(x, y);
+    const marked = isMarked(x, y);
+    
+    if (marked) {
+      return `cell marked cell-${x}-${y}`;
+    }
     
     if (!revealed) {
       return `cell hidden cell-${x}-${y}`;
@@ -395,8 +477,13 @@ const TreasureRift = () => {
   };
 
   const getCellContent = (x, y) => {
-    const cell = board[y][x];
+    const cell = board[y] && board[y][x];
     const revealed = isRevealed(x, y);
+    const marked = isMarked(x, y);
+    
+    if (marked) {
+      return '❌';
+    }
     
     if (!revealed) {
       return '';
@@ -451,6 +538,23 @@ const TreasureRift = () => {
                   key={`${x}-${y}`}
                   className={getCellClassName(x, y)}
                   onClick={() => handleCellClick(x, y)}
+                  onContextMenu={(e) => handleCellLongPress(x, y, e)}
+                  onTouchStart={(e) => {
+                    const longPressTimer = setTimeout(() => {
+                      handleCellLongPress(x, y, e);
+                    }, 500);
+                    e.target.longPressTimer = longPressTimer;
+                  }}
+                  onTouchEnd={(e) => {
+                    if (e.target.longPressTimer) {
+                      clearTimeout(e.target.longPressTimer);
+                    }
+                  }}
+                  onTouchMove={(e) => {
+                    if (e.target.longPressTimer) {
+                      clearTimeout(e.target.longPressTimer);
+                    }
+                  }}
                 >
                   {getCellContent(x, y)}
                 </div>
@@ -468,6 +572,14 @@ const TreasureRift = () => {
       <div className="game-legend">
         <h3>Legend</h3>
         <div className="legend-items">
+          <div className="legend-item">
+            <span className="legend-icon">❌</span>
+            <span className="legend-text">Mark - Single click to mark a spot you believe doesn't have the treasure</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-icon">🔍</span>
+            <span className="legend-text">Explore - Double click to explore a spot (uses an exploration)</span>
+          </div>
           <div className="legend-item">
             <span className="legend-icon">🗿</span>
             <span className="legend-text">Ancient Rock - Treasure cannot be within one square (including diagonally)</span>
