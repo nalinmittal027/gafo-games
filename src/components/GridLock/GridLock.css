@@ -62,7 +62,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 15px 0;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--cell-border);
   width: 100%;
 }
@@ -137,7 +137,7 @@ body {
 }
 
 /* Buttons with fixed styles to ensure alignment */
-.game-button, .back-button, .hint-button, .solution-button {
+.game-button, .hint-button, .solution-button {
   border: none;
   padding: 0 15px;
   border-radius: 4px;
@@ -157,7 +157,22 @@ body {
   margin: 0;
 }
 
-.game-button, .back-button {
+.back-link {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-decoration: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 40px;
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.game-button {
   background-color: var(--accent-color);
   color: white;
 }
@@ -172,7 +187,7 @@ body {
   color: white;
 }
 
-.game-button:hover, .back-button:hover {
+.game-button:hover, .back-link:hover {
   background-color: var(--accent-hover);
 }
 
@@ -189,22 +204,60 @@ body {
   cursor: not-allowed;
 }
 
+/* Reset button */
+.grid-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.reset-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.reset-button:hover {
+  background-color: var(--accent-hover);
+}
+
+.reset-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Game Area */
 .game-area {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
-  margin-bottom: 40px;
+  gap: 20px;
+  margin-bottom: 30px;
   position: relative;
   width: 100%;
 }
 
-/* Letter Values */
-.letter-values {
+/* Game Panel (Letter Values and Remaining Letters) */
+.game-panel {
   flex: 1;
   min-width: 250px;
   max-width: 350px;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Letter Values */
+.letter-values {
+  padding: 15px;
   background-color: var(--panel-bg);
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
@@ -212,11 +265,11 @@ body {
 
 .letter-values h3 {
   margin-top: 0;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   letter-spacing: 1px;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   position: relative;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
   font-family: 'Orbitron', sans-serif;
 }
 
@@ -233,7 +286,7 @@ body {
 .letter-values-grid {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .letter-value-row {
@@ -244,28 +297,66 @@ body {
 .value-cell {
   background-color: var(--accent-color);
   color: white;
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
   display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 4px;
   font-weight: 600;
-  margin-right: 15px;
+  margin-right: 10px;
 }
 
 .letters-cells {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .letter-cell {
   background-color: var(--cell-bg);
-  padding: 5px 10px;
+  padding: 4px 8px;
   border-radius: 4px;
   text-transform: uppercase;
   font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Remaining Letters */
+.remaining-letters {
+  padding: 15px;
+  background-color: var(--panel-bg);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.remaining-letters h3 {
+  margin-top: 0;
+  letter-spacing: 1px;
+  font-size: 1.1rem;
+  position: relative;
+  padding-bottom: 8px;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.remaining-letters h3:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 2px;
+  background-color: var(--accent-color);
+}
+
+.remaining-count {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent-color);
 }
 
 /* Grid Area */
@@ -273,12 +364,12 @@ body {
   flex: 2;
   min-width: 300px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
 }
 
 .grid-container {
   overflow-x: auto;
-  padding: 20px;
+  padding: 15px;
   background-color: var(--grid-bg);
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
@@ -294,20 +385,20 @@ body {
 }
 
 .empty-cell {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
 }
 
 .col-sum, .row-sum {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: 600;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   border-radius: 4px;
-  margin: 3px;
+  margin: 2px;
 }
 
 .col-sum.matched, .row-sum.matched {
@@ -322,13 +413,13 @@ body {
 
 .grid-row {
   display: flex;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .grid-cell {
-  width: 45px;
-  height: 45px;
-  margin: 3px;
+  width: 40px;
+  height: 40px;
+  margin: 2px;
   position: relative;
   background-color: var(--cell-bg);
   border: 1px solid var(--cell-border);
@@ -362,7 +453,7 @@ body {
   height: 100%;
   border: none;
   text-align: center;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 700;
   text-transform: uppercase;
   font-family: 'Quicksand', sans-serif;
@@ -388,57 +479,23 @@ body {
   font-size: 0.7rem;
   background-color: var(--accent-color);
   color: white;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* Valid column styles */
-.grid-cell.valid-column {
-  border-bottom-color: var(--accent-color);
-  border-bottom-width: 2px;
-}
-
-.col-indicators {
-  display: flex;
-  margin-top: 5px;
-}
-
-.col-indicator {
-  width: 45px;
-  height: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 3px;
-  color: var(--accent-color);
-  font-size: 1.2rem;
-  visibility: hidden;
-}
-
-.col-indicator.visible {
-  visibility: visible;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0% { opacity: 0.6; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-3px); }
-  100% { opacity: 0.6; transform: translateY(0); }
-}
-
 /* Win Message */
 .win-message {
   background-color: var(--success-color);
   color: white;
-  padding: 25px;
+  padding: 20px;
   border-radius: 8px;
   text-align: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .win-message h2 {
@@ -468,11 +525,11 @@ body {
 .solution-message {
   background-color: var(--solution-color);
   color: white;
-  padding: 25px;
+  padding: 20px;
   border-radius: 8px;
   text-align: center;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .solution-message h2 {
@@ -501,7 +558,7 @@ body {
 /* Game Instructions */
 .game-instructions {
   background-color: var(--panel-bg);
-  padding: 20px 25px;
+  padding: 15px 20px;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
   margin-top: auto;
@@ -510,11 +567,11 @@ body {
 .game-instructions h3 {
   margin-top: 0;
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   letter-spacing: 1px;
   position: relative;
-  padding-bottom: 10px;
-  margin-bottom: 15px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
   font-family: 'Orbitron', sans-serif;
 }
 
@@ -534,22 +591,10 @@ body {
 }
 
 .game-instructions li {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: var(--muted-text);
-  line-height: 1.5;
-}
-
-/* Note styles */
-.valid-column-note {
-  margin-top: 10px;
-  font-style: italic;
-  color: var(--accent-color);
-}
-
-.hint-note {
-  margin-top: 10px;
-  font-style: italic;
-  color: var(--hint-color);
+  line-height: 1.4;
+  font-size: 0.95rem;
 }
 
 /* Responsive Adjustments */
@@ -558,9 +603,14 @@ body {
     flex-direction: column;
   }
   
-  .letter-values {
+  .game-panel {
+    flex-direction: row;
     max-width: none;
     width: 100%;
+  }
+  
+  .letter-values, .remaining-letters {
+    flex: 1;
   }
 }
 
@@ -573,9 +623,9 @@ body {
   /* Mobile header */
   .grid-lock-header {
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     align-items: flex-start;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
   }
   
   .game-title {
@@ -603,7 +653,7 @@ body {
   }
   
   /* Button styling for grid layout */
-  .hint-button, .solution-button, .game-button, .back-button {
+  .hint-button, .solution-button, .game-button {
     height: 40px;
     min-height: 40px;
     max-height: 40px;
@@ -614,57 +664,131 @@ body {
     padding: 0 8px;
   }
   
-  /* Game area vertical on mobile */
-  .game-area {
-    flex-direction: column-reverse; /* Grid first, then letter values */
-    margin-top: 20px;
-    gap: 20px;
-  }
-  
-  .letter-values {
-    max-width: none;
-    width: 100%;
-    order: 2;
-  }
-  
-  .grid-area {
-    width: 100%;
-    order: 1;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  
-  .grid-container {
-    overflow-x: auto;
-  }
-}
-
-@media (max-width: 480px) {
-  .grid-lock-container {
-    padding: 10px 5px;
-  }
-  
-  .game-title {
-    font-size: 1.8rem;
-  }
-  
-  .header-controls {
-    grid-gap: 6px;
-  }
-  
-  .grid-cell, .row-sum, .col-sum, .empty-cell {
-    width: 40px;
+  /* Back link styling */
+  .back-link {
     height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+    width: 40px;
+    min-width: 40px;
+    margin: 0;
+  }
+  
+  /* Game panel goes vertical on mobile */
+  .game-panel {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  /* Special mobile layout for better UX when typing */
+  .mobile-view {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Make everything smaller on mobile */
+  .grid-cell, .row-sum, .col-sum, .empty-cell {
+    width: 36px;
+    height: 36px;
     margin: 2px;
   }
   
   .grid-cell input {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
   
   .letter-value-indicator {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     font-size: 0.6rem;
+  }
+  
+  /* Mobile layout for better visibility when keyboard is open */
+  @media (max-height: 600px) {
+    .grid-lock-container {
+      padding: 5px;
+    }
+    
+    .grid-lock-header {
+      margin-bottom: 10px;
+      padding: 5px 0;
+    }
+    
+    .game-title {
+      font-size: 1.5rem;
+    }
+    
+    .game-area {
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .game-panel {
+      flex-direction: row;
+      gap: 10px;
+    }
+    
+    .letter-values, .remaining-letters {
+      padding: 8px;
+    }
+    
+    .letter-values h3, .remaining-letters h3 {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    
+    .letter-value-row {
+      margin-bottom: 3px;
+    }
+    
+    .value-cell {
+      width: 20px;
+      height: 20px;
+      margin-right: 5px;
+      font-size: 0.8rem;
+    }
+    
+    .letter-cell {
+      padding: 2px 6px;
+      font-size: 0.8rem;
+    }
+    
+    .remaining-count {
+      font-size: 1.5rem;
+    }
+    
+    .grid-container {
+      padding: 8px;
+    }
+    
+    .grid-cell, .row-sum, .col-sum, .empty-cell {
+      width: 30px;
+      height: 30px;
+      margin: 1px;
+    }
+    
+    .grid-cell input {
+      font-size: 0.9rem;
+    }
+    
+    .letter-value-indicator {
+      width: 8px;
+      height: 8px;
+      font-size: 0.5rem;
+    }
+    
+    .game-instructions {
+      padding: 8px 12px;
+    }
+    
+    .game-instructions h3 {
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    
+    .game-instructions li {
+      font-size: 0.8rem;
+      margin-bottom: 3px;
+    }
   }
 }

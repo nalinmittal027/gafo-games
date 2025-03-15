@@ -1,7 +1,8 @@
 // src/components/GridLock/GridLock.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import './GridLock.css';
+import { FaRedo, FaArrowLeft } from 'react-icons/fa';
 
 // Word dictionaries for different word lengths
 const wordDictionaries = {
@@ -11,14 +12,9 @@ const wordDictionaries = {
   
   5: ['plane', 'flame', 'blame', 'frame', 'shame', 'space', 'trace', 'grace', 'place', 'brace', 'store', 'shore', 'chore', 'snore', 'score', 'scent', 'spent', 'meant', 'plant', 'grant', 'slant', 'craft', 'draft', 'shaft', 'smart', 'start', 'chart', 'spark', 'stark', 'shark', 'shape', 'grape', 'drape', 'scrape', 'stare', 'scare', 'spare', 'share', 'flare', 'blare', 'glare', 'house', 'mouse', 'blouse', 'grind', 'blind', 'minds', 'winds', 'finds', 'binds', 'shine', 'whine', 'spine', 'twine', 'swine', 'dines', 'lines', 'pines', 'vines', 'mines', 'speak', 'freak', 'bleak', 'sneak', 'steak', 'break', 'creak', 'dream', 'cream', 'steam', 'gleam', 'seams', 'teams', 'beams', 'reams'],
   
-  6: ['planet', 'market', 'basket', 'pocket', 'socket', 'flower', 'shower', 'slower', 'towers', 'powers', 'carpet', 'forget', 'target', 'carrot', 'pencil', 'happen', 'hidden', 'kitten', 'golden', 'frozen', 'listen', 'spoken', 'broken', 'chosen', 'woven', 'action', 'nation', 'lotion', 'potion', 'motion', 'option', 'station', 'caution', 'faction', 'mention', 'dragon', 'carbon', 'ribbon', 'cotton', 'button', 'common', 'cannon', 'season', 'reason', 'treason', 'lesson', 'blossom', 'tender', 'vendor', 'border', 'murder', 'powder', 'wonder', 'louder', 'holder', 'folder', 'summer', 'dinner', 'winner', 'copper', 'hopper', 'proper', 'supper', 'matter', 'batter', 'letter', 'better', 'setter', 'bitter', 'litter', 'sitter']
-};
-
-// Words for first column (vertical words)
-const verticalWordsByLength = {
-  3: ['cat', 'dog', 'rat', 'bat', 'hat', 'win', 'map', 'fog', 'big', 'top', 'pen', 'sun', 'fan', 'gem', 'web'],
-  4: ['card', 'game', 'time', 'past', 'wind', 'star', 'data', 'fish', 'town', 'book', 'mind', 'soil', 'film', 'tree', 'city'],
-  5: ['magic', 'plant', 'dream', 'space', 'water', 'beach', 'music', 'tiger', 'party', 'stone', 'world', 'light', 'earth', 'cloud', 'robot']
+  6: ['planet', 'market', 'basket', 'pocket', 'socket', 'flower', 'shower', 'slower', 'towers', 'powers', 'carpet', 'forget', 'target', 'carrot', 'pencil', 'happen', 'hidden', 'kitten', 'golden', 'frozen', 'listen', 'spoken', 'broken', 'chosen', 'woven', 'action', 'nation', 'lotion', 'potion', 'motion', 'option', 'station', 'caution', 'faction', 'mention', 'dragon', 'carbon', 'ribbon', 'cotton', 'button', 'common', 'cannon', 'season', 'reason', 'treason', 'lesson', 'blossom', 'tender', 'vendor', 'border', 'murder', 'powder', 'wonder', 'louder', 'holder', 'folder', 'summer', 'dinner', 'winner', 'copper', 'hopper', 'proper', 'supper', 'matter', 'batter', 'letter', 'better', 'setter', 'bitter', 'litter', 'sitter'],
+  
+  7: ['amazing', 'blazing', 'camping', 'dancing', 'farming', 'gossips', 'housing', 'jogging', 'kingdom', 'laughing', 'mansion', 'napping', 'packing', 'quaking', 'rocking', 'sailing', 'talking', 'vampire', 'walking', 'yoghurt', 'zipping', 'animals', 'between', 'complex', 'diamond', 'evolves', 'fantasy', 'general', 'harvest', 'inspire', 'journey', 'knights', 'limited', 'monster', 'network', 'organic', 'package', 'qualify', 'railway', 'supreme', 'texture', 'upgrade', 'various', 'website', 'youthful', 'zephyrs']
 };
 
 const GridLock = () => {
@@ -47,6 +43,12 @@ const GridLock = () => {
   const [solutionRevealed, setSolutionRevealed] = useState(false);
   const [invalidLetter, setInvalidLetter] = useState('');
   
+  // Track remaining letters
+  const [remainingLetters, setRemainingLetters] = useState(0);
+  
+  // Refs for keyboard navigation
+  const cellRefs = useRef([]);
+  
   // Load custom font
   useEffect(() => {
     const fontLink = document.createElement('link');
@@ -68,67 +70,60 @@ const GridLock = () => {
     );
   };
   
-  // Generate the game grid with the first column as a valid word
+  // Generate random letter for first column
+  const getRandomLetter = () => {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    return letters.charAt(Math.floor(Math.random() * letters.length));
+  };
+  
+  // Generate the game grid with random first letters
   const generateGameGrid = (rows) => {
-    // Step 1: Select a vertical word for the first column
-    let verticalWord;
-    
-    // Try to find a word that matches our row count exactly
-    if (verticalWordsByLength[rows] && verticalWordsByLength[rows].length > 0) {
-      // Pick a random word from the list for this row count
-      const wordOptions = verticalWordsByLength[rows];
-      verticalWord = wordOptions[Math.floor(Math.random() * wordOptions.length)];
-    } else {
-      // Fallback: construct a word from valid starting letters
-      const allPossibleLetters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-      verticalWord = '';
-      
-      // Shuffle the letters
-      for (let i = allPossibleLetters.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allPossibleLetters[i], allPossibleLetters[j]] = [allPossibleLetters[j], allPossibleLetters[i]];
-      }
-      
-      // Pick first 'rows' letters that have at least one word starting with them
-      for (let letter of allPossibleLetters) {
-        // Find if there are words starting with this letter
-        let hasWords = false;
-        for (let wordLength = 3; wordLength <= 6; wordLength++) {
-          if (findWordsStartingWith(letter, wordLength).length > 0) {
-            hasWords = true;
-            break;
-          }
-        }
-        
-        if (hasWords) {
-          verticalWord += letter;
-          if (verticalWord.length === rows) break;
-        }
-      }
-    }
-    
     // Create the grid
-    const grid = Array(rows).fill().map(() => Array(6).fill(''));
+    const grid = Array(rows).fill().map(() => Array(7).fill('')); // Support up to 7-letter words
     
-    // Fill the first column with our vertical word
-    for (let i = 0; i < rows && i < verticalWord.length; i++) {
-      grid[i][0] = verticalWord[i];
-    }
-    
-    // Step 2: For each row, choose a valid word that starts with the first column letter
+    // For each row, fill the first column with a random letter
     for (let i = 0; i < rows; i++) {
-      const firstLetter = grid[i][0];
+      // Generate a random letter for the first column
+      let firstLetter = getRandomLetter();
       
-      // Randomly choose a word length between 3 and 6
-      const wordLength = Math.floor(Math.random() * 4) + 3; // 3 to 6
+      // Check if there are valid words that start with this letter in any length
+      let hasValidWords = false;
+      for (let wordLength = 3; wordLength <= (rows >= 5 ? 7 : 6); wordLength++) {
+        if (findWordsStartingWith(firstLetter, wordLength).length > 0) {
+          hasValidWords = true;
+          break;
+        }
+      }
+      
+      // If no valid words found for this letter, try again
+      if (!hasValidWords) {
+        let attempts = 0;
+        while (!hasValidWords && attempts < 26) { // Try all letters if needed
+          firstLetter = getRandomLetter();
+          for (let wordLength = 3; wordLength <= (rows >= 5 ? 7 : 6); wordLength++) {
+            if (findWordsStartingWith(firstLetter, wordLength).length > 0) {
+              hasValidWords = true;
+              break;
+            }
+          }
+          attempts++;
+        }
+      }
+      
+      grid[i][0] = firstLetter;
+      
+      // Choose a valid word that starts with the first letter
+      // Randomly choose a word length between 3 and 6/7 (depending on difficulty)
+      const maxWordLength = rows >= 5 ? 7 : 6;
+      const wordLength = Math.floor(Math.random() * (maxWordLength - 2)) + 3; // 3 to 6/7
       
       // Find words starting with the first letter
       const possibleWords = findWordsStartingWith(firstLetter, wordLength);
       
       // If no words found, try a different length
       if (possibleWords.length === 0) {
-        // Try all lengths
-        for (let len = 3; len <= 6; len++) {
+        // Try all lengths from 3 to max length
+        for (let len = 3; len <= maxWordLength; len++) {
           const otherWords = findWordsStartingWith(firstLetter, len);
           if (otherWords.length > 0) {
             const randomWord = otherWords[Math.floor(Math.random() * otherWords.length)];
@@ -262,6 +257,25 @@ const GridLock = () => {
     return availableCells.slice(0, Math.min(numCells, availableCells.length));
   };
   
+  // Calculate number of remaining letters to be filled
+  const calculateRemainingLetters = (grid) => {
+    let total = 0;
+    let filled = 0;
+    
+    for (let i = 0; i < grid.length; i++) {
+      for (let j = 0; j < grid[i].length; j++) {
+        if (originalGrid[i][j]) { // This is a valid cell in the solution
+          total++;
+          if (grid[i][j] && grid[i][j].letter) { // This cell has a letter in the player's grid
+            filled++;
+          }
+        }
+      }
+    }
+    
+    return total - filled;
+  };
+  
   // Create a new game
   const generateNewGame = (rows) => {
     const difficultyLevel = rows || difficulty;
@@ -304,13 +318,36 @@ const GridLock = () => {
     setRowMatches(Array(difficultyLevel).fill(false));
     setColMatches(Array(Math.max(...gameGrid.map(row => row.length))).fill(false));
     setInvalidLetter('');
+    
+    // Initialize cell refs for keyboard navigation
+    cellRefs.current = Array(difficultyLevel).fill().map(() => Array(7).fill(null));
+  };
+  
+  // Reset current grid (keep the same puzzle)
+  const resetGrid = () => {
+    if (gameWon || solutionRevealed) return;
+    
+    // Create a new player grid based on the original grid, but only reveal the first column and previously revealed cells
+    const newGrid = grid.map((row, i) => {
+      return row.map((cell, j) => {
+        if (!cell) return null; // Keep null cells as null
+        
+        return {
+          letter: cell.revealed ? cell.letter : '', // Keep revealed cells' letters, clear others
+          revealed: cell.revealed // Keep revealed status
+        };
+      });
+    });
+    
+    setGrid(newGrid);
+    setAttempts(attempts + 1); // Count as an attempt
   };
   
   // Calculate if row totals match expected values
   const calculateRowMatches = () => {
     return rowSums.map((expectedSum, rowIndex) => {
       const currentSum = grid[rowIndex].reduce((sum, cell) => {
-        return sum + (cell.letter ? letterValues[cell.letter] || 0 : 0);
+        return sum + (cell && cell.letter ? letterValues[cell.letter] || 0 : 0);
       }, 0);
       return currentSum === expectedSum;
     });
@@ -321,12 +358,98 @@ const GridLock = () => {
     return colSums.map((expectedSum, colIndex) => {
       let currentSum = 0;
       for (let i = 0; i < grid.length; i++) {
-        if (grid[i][colIndex]) {
-          currentSum += grid[i][colIndex].letter ? letterValues[grid[i][colIndex].letter] || 0 : 0;
+        if (grid[i][colIndex] && grid[i][colIndex].letter) {
+          currentSum += letterValues[grid[i][colIndex].letter] || 0;
         }
       }
       return currentSum === expectedSum;
     });
+  };
+  
+  // Move focus to the next cell based on direction
+  const moveFocus = (rowIndex, colIndex, direction) => {
+    let nextRow = rowIndex;
+    let nextCol = colIndex;
+    
+    switch(direction) {
+      case 'ArrowRight':
+        // Find the next valid cell to the right
+        nextCol++;
+        while (nextCol < 7 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
+          nextCol++;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextCol >= 7 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
+          nextCol = colIndex;
+        }
+        break;
+      case 'ArrowLeft':
+        // Find the next valid cell to the left
+        nextCol--;
+        while (nextCol >= 0 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
+          nextCol--;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextCol < 0 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
+          nextCol = colIndex;
+        }
+        break;
+      case 'ArrowUp':
+        // Find the next valid cell above
+        nextRow--;
+        while (nextRow >= 0 && (!grid[nextRow][colIndex] || grid[nextRow][colIndex].revealed || !originalGrid[nextRow][colIndex])) {
+          nextRow--;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextRow < 0 || !grid[nextRow][colIndex] || grid[nextRow][colIndex].revealed || !originalGrid[nextRow][colIndex]) {
+          nextRow = rowIndex;
+        }
+        break;
+      case 'ArrowDown':
+        // Find the next valid cell below
+        nextRow++;
+        while (nextRow < grid.length && (!grid[nextRow][colIndex] || grid[nextRow][colIndex].revealed || !originalGrid[nextRow][colIndex])) {
+          nextRow++;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextRow >= grid.length || !grid[nextRow][colIndex] || grid[nextRow][colIndex].revealed || !originalGrid[nextRow][colIndex]) {
+          nextRow = rowIndex;
+        }
+        break;
+      case 'Backspace':
+        // First clear current cell if not already empty
+        const currentCell = grid[rowIndex][colIndex];
+        if (currentCell && currentCell.letter && !currentCell.revealed) {
+          handleCellChange(rowIndex, colIndex, '');
+        }
+        
+        // Then move focus to previous cell (left)
+        nextCol--;
+        while (nextCol >= 0 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
+          nextCol--;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextCol < 0 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
+          nextCol = colIndex;
+        }
+        break;
+      default:
+        // For letter inputs, after setting the letter, move to next cell to the right
+        nextCol++;
+        while (nextCol < 7 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
+          nextCol++;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextCol >= 7 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
+          nextCol = colIndex;
+        }
+        break;
+    }
+    
+    // Focus the next cell if it's different from the current one
+    if ((nextRow !== rowIndex || nextCol !== colIndex) && cellRefs.current[nextRow] && cellRefs.current[nextRow][nextCol]) {
+      cellRefs.current[nextRow][nextCol].focus();
+    }
   };
   
   // Handle cell input change
@@ -350,16 +473,45 @@ const GridLock = () => {
       letter: inputLetter 
     };
     setGrid(newGrid);
-    setAttempts(prev => prev + 1);
+    
+    // Only increment attempts for new inputs, not deletions
+    if (inputLetter) {
+      setAttempts(prev => prev + 1);
+    }
+    
     setInvalidLetter('');
   };
   
-  // Restart the game
-  const restartGame = () => {
-    generateNewGame(difficulty);
+  // Handle keyboard navigation and input
+  const handleKeyDown = (event, rowIndex, colIndex) => {
+    if (gameWon || solutionRevealed) return;
+    
+    const { key } = event;
+    
+    // If it's an arrow key, prevent default behavior and move focus
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+      event.preventDefault();
+      moveFocus(rowIndex, colIndex, key);
+    } 
+    // If it's a letter key, let the input handle it but move focus after
+    else if (/^[a-zA-Z]$/.test(key) && key.length === 1) {
+      // The input change will be handled separately
+      // After the input is handled, we'll move focus to the next cell
+      setTimeout(() => {
+        moveFocus(rowIndex, colIndex, 'letter');
+      }, 10);
+    }
+    // For backspace, handle special delete and move logic
+    else if (key === 'Backspace') {
+      // If the cell is already empty, move to previous cell
+      if (!grid[rowIndex][colIndex].letter) {
+        event.preventDefault();
+        moveFocus(rowIndex, colIndex, 'Backspace');
+      }
+    }
   };
   
-  // Change difficulty level
+  // Handle difficulty change
   const handleDifficultyChange = (e) => {
     const newDifficulty = parseInt(e.target.value);
     setDifficulty(newDifficulty);
@@ -425,10 +577,14 @@ const GridLock = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Check win condition whenever grid changes
+  // Update remaining letters whenever grid changes
   useEffect(() => {
-    if (!grid.length) return;
+    if (!grid.length || !originalGrid.length) return;
     
+    const remaining = calculateRemainingLetters(grid);
+    setRemainingLetters(remaining);
+    
+    // Check win condition
     const newRowMatches = calculateRowMatches();
     const newColMatches = calculateColumnMatches();
     
@@ -440,16 +596,7 @@ const GridLock = () => {
     const allColsMatch = newColMatches.every(match => match);
     
     // Check if all non-empty cells are filled
-    let allCellsFilled = true;
-    for (let i = 0; i < grid.length; i++) {
-      for (let j = 0; j < grid[i].length; j++) {
-        if (grid[i][j] && !grid[i][j].letter && originalGrid[i][j]) {
-          allCellsFilled = false;
-          break;
-        }
-      }
-      if (!allCellsFilled) break;
-    }
+    let allCellsFilled = remaining === 0;
     
     if (allRowsMatch && allColsMatch && allCellsFilled && !solutionRevealed) {
       setGameWon(true);
@@ -491,10 +638,12 @@ const GridLock = () => {
           </button>
           
           <button className="game-button" onClick={restartGame}>
-            {gameWon || solutionRevealed ? 'NEW GAME' : 'RESTART'}
+            NEW GAME
           </button>
           
-          <Link to="/" className="back-button">BACK</Link>
+          <Link to="/" className="back-link">
+            <FaArrowLeft />
+          </Link>
         </div>
       </div>
       
@@ -505,23 +654,35 @@ const GridLock = () => {
       )}
       
       <div className="game-area">
-        <div className="letter-values">
-          <h3>LETTER VALUES</h3>
-          <div className="letter-values-grid">
-            {Object.entries(letterValueGroups).map(([value, letters]) => (
-              <div key={value} className="letter-value-row">
-                <div className="value-cell">{value}</div>
-                <div className="letters-cells">
-                  {letters.map(letter => (
-                    <div key={letter} className="letter-cell">{letter}</div>
-                  ))}
+        <div className="game-panel">
+          <div className="letter-values">
+            <h3>LETTER VALUES</h3>
+            <div className="letter-values-grid">
+              {Object.entries(letterValueGroups).map(([value, letters]) => (
+                <div key={value} className="letter-value-row">
+                  <div className="value-cell">{value}</div>
+                  <div className="letters-cells">
+                    {letters.map(letter => (
+                      <div key={letter} className="letter-cell">{letter}</div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          </div>
+          
+          <div className="remaining-letters">
+            <h3>REMAINING</h3>
+            <div className="remaining-count">{remainingLetters}</div>
           </div>
         </div>
         
         <div className="grid-area">
+          <div className="grid-header">
+            <button className="reset-button" onClick={resetGrid} disabled={gameWon || solutionRevealed}>
+              <FaRedo /> Reset
+            </button>
+          </div>
           <div className="grid-container">
             <div className="grid">
               {/* Column sums at the top */}
@@ -566,8 +727,14 @@ const GridLock = () => {
                           maxLength="1"
                           value={cell.letter}
                           onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, colIndex)}
                           disabled={colIndex === 0 || cell.revealed || gameWon || solutionRevealed}
                           className={colIndex === 0 || cell.revealed || solutionRevealed ? 'revealed-input' : ''}
+                          ref={el => {
+                            if (cellRefs.current[rowIndex]) {
+                              cellRefs.current[rowIndex][colIndex] = el;
+                            }
+                          }}
                         />
                         {cell.letter && (
                           <span className="letter-value-indicator">
@@ -606,16 +773,23 @@ const GridLock = () => {
         <h3>HOW TO PLAY</h3>
         <ul>
           <li>Complete the grid with letters to form valid words in each row</li>
-          <li>The first column is already filled and forms a vertical word</li>
+          <li>The first column letter is already provided for each row</li>
           <li>Each row starts with the letter in the first column</li>
           <li>The sum of each row and column must match the numbers shown</li>
           <li>Each letter has a numerical value (0-4) shown in the table</li>
           <li>3 letters are revealed to help you get started</li>
+          <li>Use arrow keys to navigate the grid</li>
+          <li>Check the remaining letters counter to track your progress</li>
           <li>Need help? Use the HINT button to reveal a letter (adds 2 to your attempts)</li>
         </ul>
       </div>
     </div>
   );
+};
+
+// Missing function: Restart Game
+const restartGame = () => {
+  generateNewGame(difficulty);
 };
 
 export default GridLock;
