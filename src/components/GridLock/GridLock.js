@@ -263,7 +263,7 @@ const GridLock = () => {
     
     for (let i = 0; i < grid.length; i++) {
       for (let j = 0; j < grid[i].length; j++) {
-        if (originalGrid[i][j]) { // This is a valid cell in the solution
+        if (originalGrid[i] && originalGrid[i][j]) { // This is a valid cell in the solution
           total++;
           if (grid[i][j] && grid[i][j].letter) { // This cell has a letter in the player's grid
             filled++;
@@ -320,6 +320,11 @@ const GridLock = () => {
     
     // Initialize cell refs for keyboard navigation
     cellRefs.current = Array(difficultyLevel).fill().map(() => Array(7).fill(null));
+  };
+  
+  // Start a new game
+  const newGame = () => {
+    generateNewGame(difficulty);
   };
   
   // Reset current grid (keep the same puzzle)
@@ -636,7 +641,7 @@ const GridLock = () => {
             SOLUTION
           </button>
           
-          <button className="game-button" onClick={restartGame}>
+          <button className="game-button" onClick={newGame}>
             NEW GAME
           </button>
           
@@ -679,7 +684,7 @@ const GridLock = () => {
         <div className="grid-area">
           <div className="grid-header">
             <button className="reset-button" onClick={resetGrid} disabled={gameWon || solutionRevealed}>
-              <FaRedo /> Reset
+              ↻ Reset
             </button>
           </div>
           <div className="grid-container">
@@ -756,7 +761,7 @@ const GridLock = () => {
         <div className="win-message">
           <h2>PUZZLE SOLVED</h2>
           <p>Completed in {attempts} attempts</p>
-          <button className="game-button" onClick={restartGame}>PLAY AGAIN</button>
+          <button className="game-button" onClick={newGame}>PLAY AGAIN</button>
         </div>
       )}
       
@@ -764,7 +769,7 @@ const GridLock = () => {
         <div className="solution-message">
           <h2>SOLUTION REVEALED</h2>
           <p>Better luck next time!</p>
-          <button className="game-button" onClick={restartGame}>PLAY AGAIN</button>
+          <button className="game-button" onClick={newGame}>PLAY AGAIN</button>
         </div>
       )}
       
