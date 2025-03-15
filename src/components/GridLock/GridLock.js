@@ -80,6 +80,16 @@ const GridLock = () => {
     // Create the grid
     const grid = Array(rows).fill().map(() => Array(7).fill('')); // Support up to 7-letter words
     
+    // Set max word length based on difficulty level
+    let maxWordLength;
+    if (rows === 3) {
+      maxWordLength = 4; // Easy: max 4-letter words
+    } else if (rows === 4) {
+      maxWordLength = 5; // Medium: max 5-letter words
+    } else {
+      maxWordLength = 7; // Hard: max 7-letter words
+    }
+    
     // For each row, fill the first column with a random letter
     for (let i = 0; i < rows; i++) {
       // Generate a random letter for the first column
@@ -87,7 +97,7 @@ const GridLock = () => {
       
       // Check if there are valid words that start with this letter in any length
       let hasValidWords = false;
-      for (let wordLength = 3; wordLength <= (rows >= 5 ? 7 : 6); wordLength++) {
+      for (let wordLength = 3; wordLength <= maxWordLength; wordLength++) {
         if (findWordsStartingWith(firstLetter, wordLength).length > 0) {
           hasValidWords = true;
           break;
@@ -99,7 +109,7 @@ const GridLock = () => {
         let attempts = 0;
         while (!hasValidWords && attempts < 26) { // Try all letters if needed
           firstLetter = getRandomLetter();
-          for (let wordLength = 3; wordLength <= (rows >= 5 ? 7 : 6); wordLength++) {
+          for (let wordLength = 3; wordLength <= maxWordLength; wordLength++) {
             if (findWordsStartingWith(firstLetter, wordLength).length > 0) {
               hasValidWords = true;
               break;
@@ -112,9 +122,8 @@ const GridLock = () => {
       grid[i][0] = firstLetter;
       
       // Choose a valid word that starts with the first letter
-      // Randomly choose a word length between 3 and 6/7 (depending on difficulty)
-      const maxWordLength = rows >= 5 ? 7 : 6;
-      const wordLength = Math.floor(Math.random() * (maxWordLength - 2)) + 3; // 3 to 6/7
+      // Randomly choose a word length between 3 and the max word length (depending on difficulty)
+      const wordLength = Math.floor(Math.random() * (maxWordLength - 2)) + 3; // 3 to maxWordLength
       
       // Find words starting with the first letter
       const possibleWords = findWordsStartingWith(firstLetter, wordLength);
@@ -233,27 +242,74 @@ const GridLock = () => {
     return { rowSums, colSums };
   };
   
-  // Reveal random cells at start (3 random cells)
-  const getRandomRevealedCells = (grid, numCells = 3) => {
-    const availableCells = [];
+  // Reveal random cells at start based on difficulty level
+  const getRandomRevealedCells = (grid, difficultyLevel) => {
+    const rows = grid.length;
     
-    // Find all cells that aren't in the first column and have a letter
-    for (let i = 0; i < grid.length; i++) {
-      for (let j = 1; j < grid[i].length; j++) { // Skip first column (already revealed)
+    // Determine number of cells to reveal based on difficulty
+    let numCellsToReveal;
+    if (rows === 3) {
+      // Easy: 3 letters already revealed in first column + 3 more random (at least 1 per row)
+      numCellsToReveal = 3;
+    } else if (rows === 4) {
+      // Medium: 4 letters already revealed in first column + 5 more random (at least 1 per row)
+      numCellsToReveal = 5;
+    } else {
+      // Hard: 5 letters already revealed in first column + 7 more random (at least 1 per row)
+      numCellsToReveal = 7;
+    }
+    
+    // First, ensure at least one cell per row (apart from first column)
+    const revealedCells = [];
+    
+    // For each row, pick one random cell that's not in the first column
+    for (let i = 0; i < rows; i++) {
+      const rowCells = [];
+      for (let j = 1; j < grid[i].length; j++) {
         if (grid[i][j]) {
-          availableCells.push({ row: i, col: j });
+          rowCells.push({ row: i, col: j });
         }
+      }
+      
+      if (rowCells.length > 0) {
+        // Pick a random cell from this row
+        const randomIndex = Math.floor(Math.random() * rowCells.length);
+        revealedCells.push(rowCells[randomIndex]);
       }
     }
     
-    // Shuffle the available cells
-    for (let i = availableCells.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [availableCells[i], availableCells[j]] = [availableCells[j], availableCells[i]];
+    // If we need more cells, add random ones
+    if (revealedCells.length < numCellsToReveal) {
+      const availableCells = [];
+      
+      // Find all cells that aren't in the first column, have a letter, and aren't already selected
+      for (let i = 0; i < grid.length; i++) {
+        for (let j = 1; j < grid[i].length; j++) {
+          if (grid[i][j]) {
+            // Check if this cell is not already in revealedCells
+            const isAlreadyRevealed = revealedCells.some(
+              cell => cell.row === i && cell.col === j
+            );
+            
+            if (!isAlreadyRevealed) {
+              availableCells.push({ row: i, col: j });
+            }
+          }
+        }
+      }
+      
+      // Shuffle the available cells
+      for (let i = availableCells.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [availableCells[i], availableCells[j]] = [availableCells[j], availableCells[i]];
+      }
+      
+      // Add more cells up to the required number
+      const additionalCells = availableCells.slice(0, numCellsToReveal - revealedCells.length);
+      revealedCells.push(...additionalCells);
     }
     
-    // Take the first numCells cells
-    return availableCells.slice(0, Math.min(numCells, availableCells.length));
+    return revealedCells;
   };
   
   // Calculate number of remaining letters to be filled
@@ -293,8 +349,8 @@ const GridLock = () => {
     setRowSums(rowSums);
     setColSums(colSums);
     
-    // Get 3 random cells to reveal
-    const randomCells = getRandomRevealedCells(gameGrid, 3);
+    // Get random cells to reveal based on difficulty level
+    const randomCells = getRandomRevealedCells(gameGrid, difficultyLevel);
     
     // Create player grid with first column and random cells revealed
     const playerGrid = gameGrid.map((row, i) => {
@@ -437,10 +493,18 @@ const GridLock = () => {
           nextCol = colIndex;
         }
         break;
+      case 'letter':
+        // For letter inputs, move to next cell to the right (fix for bug #1)
+        nextCol++;
+        while (nextCol < 7 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
+          nextCol++;
+        }
+        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
+        if (nextCol >= 7 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
+          nextCol = colIndex;
+        }
+        break;
       default:
-        // For letter inputs, stay in the same cell (this fixes bug #1)
-        nextRow = rowIndex;
-        nextCol = colIndex;
         break;
     }
     
@@ -491,9 +555,13 @@ const GridLock = () => {
       event.preventDefault();
       moveFocus(rowIndex, colIndex, key);
     } 
-    // For letter inputs, don't automatically move (fix for bug #1)
+    // For letter inputs, move to next cell after handling input
     else if (/^[a-zA-Z]$/.test(key) && key.length === 1) {
-      // Let the input handle it but don't move focus
+      // The input change will be handled separately
+      // After the input is handled, we'll move focus to the next cell
+      setTimeout(() => {
+        moveFocus(rowIndex, colIndex, 'letter');
+      }, 10);
     }
     // For backspace, handle special delete and move logic
     else if (key === 'Backspace') {

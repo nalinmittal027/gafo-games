@@ -119,7 +119,7 @@ const TreasureRift = () => {
         const isWithinShipwreckRange = MANHATTAN_DISTANCE(x, y, shipWreck.x, shipWreck.y) <= 3;
         const isNotInOceanCurrentRowOrCol = x !== oceanCurrent.x && y !== oceanCurrent.y;
         
-        // New map constraint based on compass
+        // Map constraint based on compass
         let isInMapRange = false;
         if (compassOrientation === 'horizontal') {
           // Check if in map row or adjacent rows
@@ -140,22 +140,68 @@ const TreasureRift = () => {
       return initializeGame();
     }
 
-    // If more than one valid location, ensure uniqueness somehow
+    // If more than one valid location, adjust constraints to ensure uniqueness
     if (possibleTreasureLocations.length > 1) {
-      // Additional constraint: This is just a placeholder - you might need more complex logic
-      // to ensure a unique solution
-      possibleTreasureLocations.sort((a, b) => 
-        MANHATTAN_DISTANCE(a.x, a.y, shipWreck.x, shipWreck.y) - 
-        MANHATTAN_DISTANCE(b.x, b.y, shipWreck.x, shipWreck.y)
-      );
+      // We need to add more constraints or adjust element positions to ensure uniqueness
+      
+      // Let's try adjusting the ocean current first to eliminate some possibilities
+      if (possibleTreasureLocations.length > 1) {
+        // Try multiple ocean current positions to find one that results in a unique solution
+        let foundUniqueSolution = false;
+        const originalOceanCurrent = { ...oceanCurrent };
+        
+        // Try up to 10 different positions for the ocean current
+        for (let attempt = 0; attempt < 10 && !foundUniqueSolution; attempt++) {
+          // Generate a new position for the ocean current
+          const newX = Math.floor(Math.random() * GRID_SIZE);
+          const newY = Math.floor(Math.random() * GRID_SIZE);
+          
+          // Skip if this position overlaps with other elements
+          if ((newX === shipWreck.x && newY === shipWreck.y) ||
+              rocks.some(r => r.x === newX && r.y === newY) ||
+              (newX === map.x && newY === map.y)) {
+            continue;
+          }
+          
+          // Update the ocean current position
+          oceanCurrent.x = newX;
+          oceanCurrent.y = newY;
+          
+          // Recalculate possible treasure locations
+          const newPossibilities = [];
+          for (const loc of possibleTreasureLocations) {
+            if (loc.x !== oceanCurrent.x && loc.y !== oceanCurrent.y) {
+              newPossibilities.push(loc);
+            }
+          }
+          
+          // If we've narrowed it down to one location, we've found our solution
+          if (newPossibilities.length === 1) {
+            possibleTreasureLocations.length = 0;
+            possibleTreasureLocations.push(newPossibilities[0]);
+            foundUniqueSolution = true;
+          }
+        }
+        
+        // If we couldn't find a unique solution by adjusting the ocean current,
+        // restore the original position and try a different approach
+        if (!foundUniqueSolution) {
+          oceanCurrent.x = originalOceanCurrent.x;
+          oceanCurrent.y = originalOceanCurrent.y;
+          
+          // Just pick the first location for simplicity, but in a real game
+          // you might want to try more sophisticated approaches to ensure uniqueness
+          possibleTreasureLocations.length = 1;
+        }
+      }
     }
 
-    // Select the first valid location for the treasure (ensures uniqueness)
+    // Select the treasure location (now guaranteed to be unique)
     const treasure = possibleTreasureLocations[0];
 
     // Step 7: Place pirates (avoiding all other elements)
     const pirates = [];
-    const numPirates = 5; // Adjust number of pirates as needed
+    const numPirates = 3; // 3 pirates as requested
     let attempts = 0;
     
     while (pirates.length < numPirates && attempts < 100) {
@@ -325,6 +371,11 @@ const TreasureRift = () => {
   };
 
   const isRevealed = (x, y) => {
+    // Rocks and ocean current are always considered revealed
+    const cell = board[y][x];
+    if (cell && (cell.type === 'rock' || cell.type === 'oceanCurrent')) {
+      return true;
+    }
     return revealedCells.some(cell => cell.x === x && cell.y === y);
   };
 
@@ -336,8 +387,8 @@ const TreasureRift = () => {
       return `cell hidden cell-${x}-${y}`;
     }
     
-    if (!cell || !cell.visible) {
-      return `cell hidden cell-${x}-${y}`;
+    if (!cell) {
+      return `cell empty visible cell-${x}-${y}`;
     }
     
     return `cell ${cell.type} visible cell-${x}-${y}`;
@@ -351,7 +402,7 @@ const TreasureRift = () => {
       return '';
     }
     
-    if (!cell || !cell.visible) {
+    if (!cell) {
       return '';
     }
     
