@@ -4,7 +4,10 @@ export const GRID_SIZE = 8;
 export const MAX_EXPLORATIONS = 10;
 export const MANHATTAN_DISTANCE = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
 
-// Check if a cell is revealed
+// Check if a cell is revealed - in this case, it's either:
+// 1. A rock or ocean current (always visible)
+// 2. An ocean tile (deep or shallow, always visible)
+// 3. A hidden item (map, compass, shipwreck, treasure) that has been revealed
 export const isRevealed = (x, y, elements, revealedCells) => {
   // Check if rock or ocean current (always revealed)
   const { rocks, oceanCurrent } = elements;
@@ -12,6 +15,7 @@ export const isRevealed = (x, y, elements, revealedCells) => {
     return true;
   }
   
+  // Check if this is a revealed hidden item
   return revealedCells.some(cell => cell.x === x && cell.y === y);
 };
 
@@ -111,7 +115,7 @@ export const createDiagonalLine = (elements, setDiagonalLine) => {
   setDiagonalLine(line);
 };
 
-// Handle revealing a cell
+// Handle revealing a cell - only lose an exploration point when finding the compass, shipwreck, or treasure
 export const revealCell = (x, y, board, elements, revealedCells, markedCells, explorationsLeft, score, gamePhase, 
   foundItems, gameStatus, treasureClues, mapClue, setRevealedCells, setMarkedCells, setExplorationsLeft, 
   setScore, setGamePhase, setFoundItems, setGameStatus, setMessage, setBoard, createDiagonalLineFunc) => {
@@ -121,12 +125,25 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     return null;
   }
   
-  // Decrement explorations left
-  const newExplorationsLeft = explorationsLeft - 1;
+  // Create a copy of the board for updates
+  const newBoard = JSON.parse(JSON.stringify(board));
   
-  // Reduce score for each exploration
-  const newScore = Math.max(0, score - 100);
-
+  // Check if this cell has something important
+  const { map, compass, shipWreck, treasure } = elements;
+  const isMap = x === map.x && y === map.y;
+  const isCompass = x === compass.x && y === compass.y;
+  const isShipwreck = x === shipWreck.x && y === shipWreck.y;
+  const isTreasure = x === treasure.x && y === treasure.y;
+  
+  // Only decrement explorations if NOT finding the map or if already past map phase
+  let newExplorationsLeft = explorationsLeft;
+  let newScore = score;
+  
+  if (!isMap || gamePhase > 1) {
+    newExplorationsLeft = explorationsLeft - 1;
+    newScore = Math.max(0, score - 100);
+  }
+  
   // Add to revealed cells
   const newRevealedCells = [...revealedCells, { x, y }];
   
@@ -135,42 +152,30 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
   if (isMarked(x, y, markedCells)) {
     newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
   }
-
-  // Check if this cell has something important
-  const { map, compass, shipWreck, treasure } = elements;
-  
-  // Create a copy of the board for updates
-  const newBoard = JSON.parse(JSON.stringify(board));
   
   // Make cell visible
   if (newBoard[y][x]) {
-    newBoard[y][x] = { ...newBoard[y][x], visible: true };
+    if (!isMap && !isCompass && !isShipwreck && !isTreasure) {
+      // Regular ocean tiles are already visible, but record it as "revealed" for arrow display
+      newBoard[y][x] = { ...newBoard[y][x], visible: true };
+    } else {
+      // For hidden items, update their visible state
+      newBoard[y][x] = { ...newBoard[y][x], visible: true };
+    }
   } else {
     // Handle case where cell might be undefined
     newBoard[y][x] = { type: 'empty', visible: true };
   }
   
-  // Update state first
+  // Update state
   setRevealedCells(newRevealedCells);
   setMarkedCells(newMarkedCells);
   setExplorationsLeft(newExplorationsLeft);
   setScore(newScore);
   setBoard(newBoard);
   
-  // Check for game over due to running out of attempts
-  if (newExplorationsLeft <= 0 && gameStatus === 'playing') {
-    setGameStatus('lost');
-    setMessage('You ran out of explorations! The treasure remains hidden.');
-    
-    // Reveal the treasure
-    const finalBoard = JSON.parse(JSON.stringify(newBoard));
-    finalBoard[treasure.y][treasure.x] = { ...finalBoard[treasure.y][treasure.x], visible: true };
-    setBoard(finalBoard);
-    return { newExplorationsLeft, newScore, finalBoard };
-  }
-  
-  // Check for special items - using separate conditionals to avoid complex logic chains
-  if (x === map.x && y === map.y) {
+  // Handle special items
+  if (isMap) {
     // Found the Map
     setFoundItems(prev => ({ ...prev, map: true }));
     setGamePhase(2);
@@ -179,7 +184,7 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     // Create diagonal line to help find compass
     if (createDiagonalLineFunc) createDiagonalLineFunc();
   }
-  else if (x === compass.x && y === compass.y) {
+  else if (isCompass) {
     // Found the Compass
     setFoundItems(prev => ({ ...prev, compass: true }));
     
@@ -191,7 +196,7 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
       setMessage("You found the Compass! Now find the Map to complete the path.");
     }
   }
-  else if (x === shipWreck.x && y === shipWreck.y) {
+  else if (isShipwreck) {
     // Found the Shipwreck
     setFoundItems(prev => ({ ...prev, shipwreck: true }));
     setGamePhase(4);
@@ -200,7 +205,7 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     const clueList = treasureClues.map((clue, index) => `${index + 1}. ${clue}`).join('\n');
     setMessage(`You found the Shipwreck and a Scroll! The Scroll contains these clues to find the treasure:\n${clueList}`);
   }
-  else if (x === treasure.x && y === treasure.y) {
+  else if (isTreasure) {
     // Found the Treasure
     if (gamePhase === 4 && foundItems.shipwreck) {
       // Win condition
@@ -218,6 +223,17 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     if (gamePhase === 1 && !foundItems.map) {
       setMessage(`No clues here. The directional arrow might help guide your search.`);
     }
+  }
+  
+  // Check if we ran out of explorations
+  if (newExplorationsLeft <= 0 && gameStatus === 'playing') {
+    setGameStatus('lost');
+    setMessage('You ran out of explorations! The treasure remains hidden.');
+    
+    // Reveal the treasure
+    const finalBoard = JSON.parse(JSON.stringify(newBoard));
+    finalBoard[treasure.y][treasure.x] = { ...finalBoard[treasure.y][treasure.x], visible: true };
+    setBoard(finalBoard);
   }
   
   return { newExplorationsLeft, newScore, newBoard };

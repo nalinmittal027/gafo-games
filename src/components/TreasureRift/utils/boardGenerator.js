@@ -116,16 +116,17 @@ export const placeObstacles = () => {
 };
 
 // Create initial board with deep ocean, shallow ocean, rocks and ocean current
+// All ocean tiles are visible initially
 export const createInitialBoard = (deepOceanTiles, obstacles) => {
   const newBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
   
-  // Add all tiles as shallow or deep ocean
+  // Add all tiles as shallow or deep ocean (visible from the start)
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       const isDeepOcean = deepOceanTiles.allTiles.some(tile => tile.x === x && tile.y === y);
       newBoard[y][x] = { 
         type: isDeepOcean ? 'deepOcean' : 'shallowOcean', 
-        visible: false 
+        visible: true // All ocean tiles are visible from the start
       };
     }
   }
@@ -144,54 +145,68 @@ export const createInitialBoard = (deepOceanTiles, obstacles) => {
   return newBoard;
 };
 
-// Generate a valid compass location
+// Generate a valid compass location with meaningful clues
 export const generateCompassLocation = (board, obstacles, deepOceanTiles) => {
-  // Prefer deep ocean tiles
+  // Get all deep ocean tiles as potential compass locations
   const deepOceanTilesList = [];
-  
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (
         board[y][x].type === 'deepOcean' &&
         !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
-        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y) &&
-        board[y][x].type !== 'map'
+        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
       ) {
         deepOceanTilesList.push({ x, y });
       }
     }
   }
 
-  // Add constraints based on different types of clues
-  const filteredTiles = deepOceanTilesList.filter(tile => {
-    // Example: Compass is in an even row and odd column
-    return (tile.y + 1) % 2 === 0 && (tile.x + 1) % 2 === 1;
-  });
-  
-  if (filteredTiles.length > 0) {
-    return filteredTiles[Math.floor(Math.random() * filteredTiles.length)];
-  }
-  
-  // Fallback to any deep ocean tile
-  if (deepOceanTilesList.length > 0) {
-    return deepOceanTilesList[Math.floor(Math.random() * deepOceanTilesList.length)];
-  }
-  
-  // Last resort: any valid tile
-  const validTiles = [];
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      if (
-        !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
-        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y) &&
-        board[y][x].type !== 'map'
-      ) {
-        validTiles.push({ x, y });
+  // If no deep ocean tiles available, fallback to any available tile
+  if (deepOceanTilesList.length === 0) {
+    const validTiles = [];
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        if (
+          !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
+          !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
+        ) {
+          validTiles.push({ x, y });
+        }
       }
     }
+    return validTiles[Math.floor(Math.random() * validTiles.length)];
   }
-  
-  return validTiles[Math.floor(Math.random() * validTiles.length)];
+
+  // Apply some constraints to make clues meaningful
+  const constraints = [];
+
+  // Constraint 1: In even row and odd column
+  constraints.push(deepOceanTilesList.filter(tile => 
+    (tile.y + 1) % 2 === 0 && (tile.x + 1) % 2 === 1
+  ));
+
+  // Constraint 2: Not in same row/column as ocean current
+  constraints.push(deepOceanTilesList.filter(tile =>
+    tile.x !== obstacles.oceanCurrent.x && tile.y !== obstacles.oceanCurrent.y
+  ));
+
+  // Constraint 3: Within 2 squares of a rock but not adjacent
+  constraints.push(deepOceanTilesList.filter(tile => {
+    return obstacles.rocks.some(rock => {
+      const distance = Math.abs(tile.x - rock.x) + Math.abs(tile.y - rock.y);
+      return distance === 2; // 2 squares away, not 1 (not adjacent)
+    });
+  }));
+
+  // Find a tile that satisfies multiple constraints if possible
+  for (let i = 0; i < constraints.length; i++) {
+    if (constraints[i].length > 0) {
+      return constraints[i][Math.floor(Math.random() * constraints[i].length)];
+    }
+  }
+
+  // If no tile satisfies our constraints, just pick a random deep ocean tile
+  return deepOceanTilesList[Math.floor(Math.random() * deepOceanTilesList.length)];
 };
 
 // Generate a shipwreck location based on map and compass
@@ -320,31 +335,51 @@ export const placeGameElements = (board, obstacles, deepOceanTiles, clueGenerato
     }
   }
   
-  // Place map
+  // Place map (hidden)
   const mapIndex = Math.floor(Math.random() * validMapTiles.length);
   const map = validMapTiles[mapIndex];
   if (map && board[map.y] && board[map.y][map.x]) {
-    board[map.y][map.x] = { type: 'map', visible: false };
+    board[map.y][map.x] = { 
+      type: 'map', 
+      // Keep base type for clue generation
+      baseType: board[map.y][map.x].type,
+      visible: false // Map is hidden initially
+    };
   }
   
-  // Generate compass location based on clues
+  // Generate compass location based on clues (hidden)
   const compass = generateCompassLocation(board, obstacles, deepOceanTiles);
   if (compass && board[compass.y] && board[compass.y][compass.x]) {
-    board[compass.y][compass.x] = { type: 'compass', visible: false };
+    board[compass.y][compass.x] = { 
+      type: 'compass', 
+      // Keep base type for clue generation
+      baseType: board[compass.y][compass.x].type,
+      visible: false // Compass is hidden initially
+    };
   }
   
-  // Generate shipwreck location based on map and compass orientation
+  // Generate shipwreck location based on map and compass orientation (hidden)
   const shipWreck = generateShipwreckLocation(map, compass);
   if (shipWreck && board[shipWreck.y] && board[shipWreck.y][shipWreck.x]) {
-    board[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: false };
+    board[shipWreck.y][shipWreck.x] = { 
+      type: 'shipWreck', 
+      // Keep base type for clue generation
+      baseType: board[shipWreck.y][shipWreck.x].type,
+      visible: false // Shipwreck is hidden initially
+    };
   }
   
-  // Generate treasure location based on various clues
+  // Generate treasure location based on various clues (hidden)
   const treasure = generateTreasureLocation(
     board, map, compass, shipWreck, obstacles, deepOceanTiles
   );
   if (treasure && board[treasure.y] && board[treasure.y][treasure.x]) {
-    board[treasure.y][treasure.x] = { type: 'treasure', visible: false };
+    board[treasure.y][treasure.x] = { 
+      type: 'treasure', 
+      // Keep base type for clue generation
+      baseType: board[treasure.y][treasure.x].type,
+      visible: false // Treasure is hidden initially
+    };
   }
   
   // Generate clues

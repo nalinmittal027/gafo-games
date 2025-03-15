@@ -55,7 +55,7 @@ const TreasureRift = () => {
   const [diagonalLine, setDiagonalLine] = useState([]);
   const [mapClue, setMapClue] = useState("");
   const [treasureClues, setTreasureClues] = useState([]);
-  const [deepOceanSections, setDeepOceanSections] = useState([]);
+  const [deepOceanSections, setDeepOceanSections] = useState({ allTiles: [], sections: [] });
 
   // Initialize the game
   useEffect(() => {
@@ -99,9 +99,10 @@ const TreasureRift = () => {
     const obstacles = placeObstacles();
     
     // Create the board with deep ocean and shallow ocean
+    // All ocean tiles are visible from the start
     const newBoard = createInitialBoard(deepOceanTiles, obstacles);
     
-    // Place the map, compass, shipwreck and treasure
+    // Place the map, compass, shipwreck and treasure (all hidden)
     const gameElements = placeGameElements(newBoard, obstacles, deepOceanTiles, clueGenerator);
     
     const { map, compass, shipWreck, treasure, compassClue, treasureClues: clues } = gameElements;
@@ -144,13 +145,26 @@ const TreasureRift = () => {
       return;
     }
     
+    // Check if this is a hidden item cell (map, compass, shipwreck, treasure)
+    const { map, compass, shipWreck, treasure } = elements;
+    const isHiddenItem = 
+      (x === map.x && y === map.y) || 
+      (x === compass.x && y === compass.y) ||
+      (x === shipWreck.x && y === shipWreck.y) ||
+      (x === treasure.x && y === treasure.y);
+    
     // Handle double click (reveal)
     if (clickTimeout) {
       clearTimeout(clickTimeout);
       setClickTimeout(null);
       
-      // Double click - reveal the cell if not already revealed
-      if (!isRevealed(x, y, elements, revealedCells)) {
+      // Double click reveals the cell
+      // For hidden items that need to be found
+      if (isHiddenItem && !isRevealed(x, y, elements, revealedCells)) {
+        handleCellReveal(x, y);
+      }
+      // For ocean cells in Phase 1 to show arrow to map
+      else if (gamePhase === 1 && !foundItems.map && !isRevealed(x, y, elements, revealedCells)) {
         handleCellReveal(x, y);
       }
       return;
@@ -158,7 +172,8 @@ const TreasureRift = () => {
     
     // Single click - set timeout to detect if it's a single or double click
     const timeout = setTimeout(() => {
-      // Single click - toggle mark
+      // Single click toggles mark
+      // We can mark both ocean cells and hidden item cells
       if (!isRevealed(x, y, elements, revealedCells)) {
         toggleMark(x, y);
       }

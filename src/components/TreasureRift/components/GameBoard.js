@@ -25,10 +25,12 @@ const Cell = memo(({
     
     if (marked) {
       classNames += ' marked';
-    } else if (!revealed) {
-      classNames += ' hidden';
-    } else if (cell) {
+    } else if (cell && cell.visible) {
+      // Cell is visible from initialization or has been revealed
       classNames += ` ${cell.type} visible`;
+    } else if (!revealed) {
+      // Cell is hidden - an item that needs to be discovered
+      classNames += ' hidden';
     } else {
       classNames += ' empty visible';
     }
@@ -53,38 +55,52 @@ const Cell = memo(({
       return '❌';
     }
     
-    if (!revealed) {
+    // Cell is not revealed (only for hidden items)
+    if (cell && !cell.visible && !revealed) {
       return '';
     }
     
-    // If it's a revealed empty cell and we're in Phase 1, show arrow to map
-    if ((cell && (cell.type === 'empty' || cell.type === 'deepOcean' || cell.type === 'shallowOcean')) 
-        && gamePhase === 1 && !foundItems.map) {
+    // Cell is a hidden item that was revealed
+    if (revealed && cell && ['map', 'compass', 'shipWreck', 'treasure'].includes(cell.type)) {
+      switch (cell.type) {
+        case 'map': return '🗺️';
+        case 'compass': return '🧭';
+        case 'shipWreck': return '⚓';
+        case 'treasure': return '💎';
+        default: return '';
+      }
+    }
+    
+    // Cell is visible from the start
+    if (cell && cell.visible) {
+      switch (cell.type) {
+        case 'rock': return '🗿';
+        case 'oceanCurrent': return '🌊';
+        // Don't show hidden items even if cell is visible
+        case 'map': 
+        case 'compass': 
+        case 'shipWreck': 
+        case 'treasure': 
+          return '';
+        case 'deepOcean': 
+        case 'shallowOcean': 
+          // If in Phase 1 and no map found, show arrow to map
+          if (gamePhase === 1 && !foundItems.map && revealed) {
+            const arrowDirection = getArrowToMap(x, y, elements, foundItems);
+            if (arrowDirection) return arrowDirection;
+          }
+          return '';
+        default: return '';
+      }
+    }
+    
+    // Empty revealed cell might show an arrow
+    if (gamePhase === 1 && !foundItems.map && revealed) {
       const arrowDirection = getArrowToMap(x, y, elements, foundItems);
       if (arrowDirection) return arrowDirection;
     }
     
-    if (!cell) {
-      return '';
-    }
-    
-    switch (cell.type) {
-      case 'rock': return '🗿';
-      case 'oceanCurrent': return '🌊';
-      case 'map': return '🗺️';
-      case 'compass': return '🧭';
-      case 'shipWreck': return '⚓';
-      case 'treasure': return '💎';
-      case 'deepOcean': 
-      case 'shallowOcean': 
-      case 'empty': 
-        // If in Phase 1 and no map found, show arrow
-        if (gamePhase === 1 && !foundItems.map) {
-          return getArrowToMap(x, y, elements, foundItems);
-        }
-        return '';
-      default: return '';
-    }
+    return '';
   };
 
   return (
