@@ -184,8 +184,8 @@ const Mobius = () => {
     }
   };
 
-  // Use power-up
-  const usePowerUp = (type) => {
+  // Function to activate power-up
+  const activatePowerUp = (type) => {
     if (powerUps[type] > 0 && gameState === 'playing') {
       setSelectedPowerUp(type);
     }
@@ -210,7 +210,7 @@ const Mobius = () => {
         <div className="power-up-grid">
           <button 
             className={`power-up ${selectedPowerUp === 'equalizer' ? 'selected' : ''} ${powerUps.equalizer <= 0 ? 'disabled' : ''}`}
-            onClick={() => usePowerUp('equalizer')}
+            onClick={() => activatePowerUp('equalizer')}
             disabled={powerUps.equalizer <= 0}
             title="Equalizer: Makes neighboring numbers match the selected number"
           >
@@ -220,7 +220,7 @@ const Mobius = () => {
           
           <button 
             className={`power-up ${selectedPowerUp === 'reverseRipple' ? 'selected' : ''} ${powerUps.reverseRipple <= 0 ? 'disabled' : ''}`}
-            onClick={() => usePowerUp('reverseRipple')}
+            onClick={() => activatePowerUp('reverseRipple')}
             disabled={powerUps.reverseRipple <= 0}
             title="Reverse Ripple: Changes propagate in the opposite direction"
           >
@@ -230,7 +230,7 @@ const Mobius = () => {
           
           <button 
             className={`power-up ${selectedPowerUp === 'extraMove' ? 'selected' : ''} ${powerUps.extraMove <= 0 ? 'disabled' : ''}`}
-            onClick={() => usePowerUp('extraMove')}
+            onClick={() => activatePowerUp('extraMove')}
             disabled={powerUps.extraMove <= 0}
             title="Extra Move: Your next move doesn't count against your move limit"
           >
@@ -240,7 +240,7 @@ const Mobius = () => {
           
           <button 
             className={`power-up ${selectedPowerUp === 'fixedPoint' ? 'selected' : ''} ${powerUps.fixedPoint <= 0 ? 'disabled' : ''}`}
-            onClick={() => usePowerUp('fixedPoint')}
+            onClick={() => activatePowerUp('fixedPoint')}
             disabled={powerUps.fixedPoint <= 0}
             title="Fixed Point: Locks a number, making it immune to changes"
           >
@@ -250,7 +250,7 @@ const Mobius = () => {
           
           <button 
             className={`power-up ${selectedPowerUp === 'loopSkip' ? 'selected' : ''} ${powerUps.loopSkip <= 0 ? 'disabled' : ''}`}
-            onClick={() => usePowerUp('loopSkip')}
+            onClick={() => activatePowerUp('loopSkip')}
             disabled={powerUps.loopSkip <= 0}
             title="Loop Skip: Temporarily breaks the loop effect for one move"
           >
