@@ -245,14 +245,11 @@ body {
   width: 100%;
 }
 
-/* Game Panel (Letter Values and Remaining Letters) */
-.game-panel {
+/* Letter Values Container */
+.letter-values-container {
   flex: 1;
   min-width: 250px;
   max-width: 350px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 
 /* Letter Values */
@@ -322,49 +319,38 @@ body {
   font-size: 0.9rem;
 }
 
-/* Remaining Letters */
-.remaining-letters {
-  padding: 15px;
-  background-color: var(--panel-bg);
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  text-align: center;
-}
-
-.remaining-letters h3 {
-  margin-top: 0;
-  letter-spacing: 1px;
-  font-size: 1.1rem;
-  position: relative;
-  padding-bottom: 8px;
-  font-family: 'Orbitron', sans-serif;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.remaining-letters h3:after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 2px;
-  background-color: var(--accent-color);
-}
-
-.remaining-count {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--accent-color);
-}
-
 /* Grid Area */
 .grid-area {
   flex: 2;
   min-width: 300px;
   display: flex;
   flex-direction: column;
+}
+
+/* Remaining Letters - new compact design below grid */
+.remaining-letters {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  background-color: var(--panel-bg);
+  border-radius: 6px;
+  margin-top: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.remaining-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--muted-text);
+  margin-right: 10px;
+}
+
+.remaining-count {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--accent-color);
 }
 
 .grid-container {
@@ -603,14 +589,9 @@ body {
     flex-direction: column;
   }
   
-  .game-panel {
-    flex-direction: row;
+  .letter-values-container {
     max-width: none;
     width: 100%;
-  }
-  
-  .letter-values, .remaining-letters {
-    flex: 1;
   }
 }
 
@@ -674,18 +655,6 @@ body {
     margin: 0;
   }
   
-  /* Game panel goes vertical on mobile */
-  .game-panel {
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  /* Special mobile layout for better UX when typing */
-  .mobile-view {
-    display: flex;
-    flex-direction: column;
-  }
-  
   /* Make everything smaller on mobile */
   .grid-cell, .row-sum, .col-sum, .empty-cell {
     width: 36px;
@@ -701,6 +670,20 @@ body {
     width: 10px;
     height: 10px;
     font-size: 0.6rem;
+  }
+  
+  /* Remaining letters on mobile */
+  .remaining-letters {
+    margin-top: 8px;
+    padding: 6px 10px;
+  }
+  
+  .remaining-label {
+    font-size: 0.8rem;
+  }
+  
+  .remaining-count {
+    font-size: 1.1rem;
   }
   
   /* Mobile layout for better visibility when keyboard is open */
@@ -723,16 +706,11 @@ body {
       margin-bottom: 10px;
     }
     
-    .game-panel {
-      flex-direction: row;
-      gap: 10px;
-    }
-    
-    .letter-values, .remaining-letters {
+    .letter-values {
       padding: 8px;
     }
     
-    .letter-values h3, .remaining-letters h3 {
+    .letter-values h3 {
       font-size: 0.9rem;
       margin-bottom: 5px;
     }
@@ -753,10 +731,6 @@ body {
       font-size: 0.8rem;
     }
     
-    .remaining-count {
-      font-size: 1.5rem;
-    }
-    
     .grid-container {
       padding: 8px;
     }
@@ -775,6 +749,19 @@ body {
       width: 8px;
       height: 8px;
       font-size: 0.5rem;
+    }
+    
+    .remaining-letters {
+      padding: 4px 8px;
+      margin-top: 5px;
+    }
+    
+    .remaining-label {
+      font-size: 0.7rem;
+    }
+    
+    .remaining-count {
+      font-size: 1rem;
     }
     
     .game-instructions {
