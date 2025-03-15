@@ -1,27 +1,4 @@
-.cell.marked {
-  background: linear-gradient(145deg, #ffcdd2, #ef9a9a);
-  color: #b71c1c;
-  font-size: 22px;
-  position: relative;
-}
-
-.cell.marked::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.1),
-    rgba(255, 255, 255, 0.1) 5px,
-    rgba(255, 205, 210, 0.3) 5px,
-    rgba(255, 205, 210, 0.3) 10px
-  );
-  border-radius: 8px;
-  z-index: 1;
-}/* src/components/TreasureRift/TreasureRift.css */
+/* src/components/TreasureRift/TreasureRift.css */
 :root {
   --primary-color: #f8b195;
   --secondary-color: #f67280;
@@ -36,8 +13,9 @@
   --ocean-color: #4fc3f7;
   --map-color: #ffcc80;
   --shipwreck-color: #795548;
-  --pirate-color: #e53935;
   --treasure-color: #ffd54f;
+  --deep-ocean-color: #005f73;
+  --shallow-ocean-color: #94d2bd;
 }
 
 body {
@@ -72,8 +50,6 @@ body {
   letter-spacing: 1px;
   font-weight: 800;
 }
-
-/* Removed the compass display that was showing at the top of the page */
 
 .game-stats {
   display: flex;
@@ -112,12 +88,61 @@ body {
   background-color: white;
   padding: 18px 25px;
   border-radius: 15px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   border-left: 6px solid var(--accent-color);
   font-size: 1.1rem;
   line-height: 1.5;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
   color: var(--text-color);
+  white-space: pre-line; /* Allow line breaks in message */
+}
+
+/* Game Inventory */
+.game-inventory {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.inventory-item {
+  background-color: var(--map-color);
+  padding: 12px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.inventory-item:hover {
+  transform: translateY(-3px);
+}
+
+.inventory-item.map {
+  background: linear-gradient(145deg, var(--map-color), #ffb74d);
+}
+
+.inventory-item.compass {
+  background: linear-gradient(145deg, #90caf9, #64b5f6);
+}
+
+.inventory-item.shipwreck {
+  background: linear-gradient(145deg, var(--shipwreck-color), #5d4037);
+  color: white;
+}
+
+.item-icon {
+  font-size: 2rem;
+  margin-bottom: 5px;
+}
+
+.item-label {
+  font-size: 0.8rem;
+  text-align: center;
+  font-weight: 600;
 }
 
 .game-board-container {
@@ -128,13 +153,24 @@ body {
 
 .game-board {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: auto repeat(8, 1fr);
   gap: 6px;
-  max-width: 450px;
+  max-width: 500px;
   background-color: rgba(255, 255, 255, 0.5);
   padding: 15px;
   border-radius: 15px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.cell-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--text-color);
+  width: 30px;
+  height: 30px;
 }
 
 .board-row {
@@ -153,12 +189,6 @@ body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-}
-
-.cell.hidden {
-  background-color: var(--grid-blue);
-  position: relative;
-  overflow: hidden;
 }
 
 /* Create different wave patterns for each cell */
@@ -186,82 +216,34 @@ body {
   animation: waves 6s infinite linear reverse;
 }
 
-/* Create unique wave patterns for different cells */
-.cell-0-0::before { animation-delay: 0s; }
-.cell-0-1::before { animation-delay: 0.2s; }
-.cell-0-2::before { animation-delay: 0.4s; }
-.cell-0-3::before { animation-delay: 0.6s; }
-.cell-0-4::before { animation-delay: 0.8s; }
-.cell-0-5::before { animation-delay: 1.0s; }
-.cell-0-6::before { animation-delay: 1.2s; }
-.cell-0-7::before { animation-delay: 1.4s; }
-
-.cell-1-0::before { animation-delay: 0.1s; }
-.cell-1-1::before { animation-delay: 0.3s; }
-.cell-1-2::before { animation-delay: 0.5s; }
-.cell-1-3::before { animation-delay: 0.7s; }
-.cell-1-4::before { animation-delay: 0.9s; }
-.cell-1-5::before { animation-delay: 1.1s; }
-.cell-1-6::before { animation-delay: 1.3s; }
-.cell-1-7::before { animation-delay: 1.5s; }
-
-.cell-2-0::before { animation-delay: 0.15s; }
-.cell-2-1::before { animation-delay: 0.35s; }
-.cell-2-2::before { animation-delay: 0.55s; }
-.cell-2-3::before { animation-delay: 0.75s; }
-.cell-2-4::before { animation-delay: 0.95s; }
-.cell-2-5::before { animation-delay: 1.15s; }
-.cell-2-6::before { animation-delay: 1.35s; }
-.cell-2-7::before { animation-delay: 1.55s; }
-
-.cell-3-0::before { animation-delay: 0.05s; }
-.cell-3-1::before { animation-delay: 0.25s; }
-.cell-3-2::before { animation-delay: 0.45s; }
-.cell-3-3::before { animation-delay: 0.65s; }
-.cell-3-4::before { animation-delay: 0.85s; }
-.cell-3-5::before { animation-delay: 1.05s; }
-.cell-3-6::before { animation-delay: 1.25s; }
-.cell-3-7::before { animation-delay: 1.45s; }
-
-.cell-4-0::before { animation-delay: 0.12s; }
-.cell-4-1::before { animation-delay: 0.32s; }
-.cell-4-2::before { animation-delay: 0.52s; }
-.cell-4-3::before { animation-delay: 0.72s; }
-.cell-4-4::before { animation-delay: 0.92s; }
-.cell-4-5::before { animation-delay: 1.12s; }
-.cell-4-6::before { animation-delay: 1.32s; }
-.cell-4-7::before { animation-delay: 1.52s; }
-
-.cell-5-0::before { animation-delay: 0.08s; }
-.cell-5-1::before { animation-delay: 0.28s; }
-.cell-5-2::before { animation-delay: 0.48s; }
-.cell-5-3::before { animation-delay: 0.68s; }
-.cell-5-4::before { animation-delay: 0.88s; }
-.cell-5-5::before { animation-delay: 1.08s; }
-.cell-5-6::before { animation-delay: 1.28s; }
-.cell-5-7::before { animation-delay: 1.48s; }
-
-.cell-6-0::before { animation-delay: 0.18s; }
-.cell-6-1::before { animation-delay: 0.38s; }
-.cell-6-2::before { animation-delay: 0.58s; }
-.cell-6-3::before { animation-delay: 0.78s; }
-.cell-6-4::before { animation-delay: 0.98s; }
-.cell-6-5::before { animation-delay: 1.18s; }
-.cell-6-6::before { animation-delay: 1.38s; }
-.cell-6-7::before { animation-delay: 1.58s; }
-
-.cell-7-0::before { animation-delay: 0.22s; }
-.cell-7-1::before { animation-delay: 0.42s; }
-.cell-7-2::before { animation-delay: 0.62s; }
-.cell-7-3::before { animation-delay: 0.82s; }
-.cell-7-4::before { animation-delay: 1.02s; }
-.cell-7-5::before { animation-delay: 1.22s; }
-.cell-7-6::before { animation-delay: 1.42s; }
-.cell-7-7::before { animation-delay: 1.62s; }
-
 @keyframes waves {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.cell.marked {
+  background: linear-gradient(145deg, #ffcdd2, #ef9a9a);
+  color: #b71c1c;
+  font-size: 22px;
+  position: relative;
+}
+
+.cell.marked::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.1) 5px,
+    rgba(255, 205, 210, 0.3) 5px,
+    rgba(255, 205, 210, 0.3) 10px
+  );
+  border-radius: 8px;
+  z-index: 1;
 }
 
 .cell.highlighted {
@@ -300,11 +282,6 @@ body {
   animation: pulse-diagonal 2s infinite alternate;
 }
 
-@keyframes pulse-diagonal {
-  from { opacity: 0.5; }
-  to { opacity: 1; }
-}
-
 .cell.empty {
   background-color: var(--grid-revealed);
 }
@@ -320,6 +297,16 @@ body {
   animation: ripple 3s infinite;
 }
 
+.cell.deepOcean {
+  background: linear-gradient(145deg, var(--deep-ocean-color), #0077b6);
+  color: white;
+}
+
+.cell.shallowOcean {
+  background: linear-gradient(145deg, var(--shallow-ocean-color), #90e0ef);
+  color: var(--text-color);
+}
+
 @keyframes ripple {
   0% { box-shadow: 0 0 0 0 rgba(79, 195, 247, 0.4); }
   70% { box-shadow: 0 0 0 15px rgba(79, 195, 247, 0); }
@@ -331,21 +318,14 @@ body {
   color: #5d4037;
 }
 
+.cell.compass {
+  background: linear-gradient(145deg, #90caf9, #64b5f6);
+  color: #1565c0;
+}
+
 .cell.shipWreck {
   background: linear-gradient(145deg, var(--shipwreck-color), #5d4037);
   color: #ffebee;
-}
-
-.cell.pirate {
-  background: linear-gradient(145deg, var(--pirate-color), #c62828);
-  color: white;
-  animation: shake 0.5s ease-in-out;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-5px); }
-  40%, 80% { transform: translateX(5px); }
 }
 
 .cell.treasure {
@@ -354,13 +334,57 @@ body {
   animation: treasure-glow 2s infinite alternate;
 }
 
-@keyframes treasure-glow {
-  from {
-    box-shadow: 0 0 10px #ffd54f, 0 0 20px #ffb300;
-  }
-  to {
-    box-shadow: 0 0 20px #ffd54f, 0 0 40px #ffb300;
-  }
+/* Game Clues Section */
+.game-clues {
+  background-color: white;
+  padding: 20px 25px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.game-clues h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--secondary-color);
+  font-size: 1.5rem;
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.game-clues h3:after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background-color: var(--accent-color);
+}
+
+.clue-section {
+  margin-bottom: 15px;
+}
+
+.clue-section h4 {
+  color: var(--dark-accent);
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.clue-section p {
+  margin: 0 0 10px;
+  line-height: 1.5;
+}
+
+.clue-section ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.clue-section li {
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 
 .game-controls {
@@ -400,12 +424,6 @@ body {
   background-color: var(--secondary-color);
   color: white;
   box-shadow: 0 4px 8px rgba(246, 114, 128, 0.3);
-}
-
-.new-game-button:hover {
-  background-color: #e05a68;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(246, 114, 128, 0.4);
 }
 
 .game-legend {
@@ -463,10 +481,6 @@ body {
   align-items: center;
   background-color: rgba(248, 177, 149, 0.2);
   border-radius: 50%;
-}
-
-.compass-icons {
-  font-size: 18px;
 }
 
 .legend-text {
@@ -570,10 +584,6 @@ body {
   color: #43a047;
 }
 
-.lost h2 {
-  color: #e53935;
-}
-
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .treasure-rift-container {
@@ -592,22 +602,26 @@ body {
   }
   
   .game-board-container {
-    overflow-x: hidden;
+    overflow-x: auto;
     max-width: 100%;
   }
   
   .game-board {
     gap: 4px;
     padding: 10px;
-    max-width: 95%;
-    margin: 0 auto;
   }
   
   .cell {
-    width: 32px;
-    height: 32px;
+    width: 35px;
+    height: 35px;
     font-size: 18px;
     border-radius: 6px;
+  }
+  
+  .cell-label {
+    width: 25px;
+    height: 25px;
+    font-size: 0.9rem;
   }
   
   .legend-items {
@@ -640,5 +654,17 @@ body {
 
   .legend-text {
     font-size: 0.85rem;
+  }
+  
+  .inventory-item {
+    padding: 8px;
+  }
+  
+  .item-icon {
+    font-size: 1.5rem;
+  }
+  
+  .item-label {
+    font-size: 0.7rem;
   }
 }
