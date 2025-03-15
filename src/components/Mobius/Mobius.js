@@ -6,24 +6,41 @@ import './Mobius.css';
 const Mobius = () => {
   // Game States
   const [gameLoop, setGameLoop] = useState([]);
-  const [movesLeft, setMovesLeft] = useState(0);
+  const [movesTaken, setMovesTaken] = useState(0);
   const [difficulty, setDifficulty] = useState('easy');
-  const [gameState, setGameState] = useState('setup'); // setup, playing, win, lose
+  const [gameState, setGameState] = useState('playing'); // playing, win
   const [lockedIndices, setLockedIndices] = useState([]);
   const [selectedPowerUp, setSelectedPowerUp] = useState(null);
+  const [showRules, setShowRules] = useState(false);
   const [powerUps, setPowerUps] = useState({
-    equalizer: 0,
-    reverseRipple: 0,
-    extraMove: 0,
-    fixedPoint: 0,
-    loopSkip: 0
+    equalizer: 1,
+    reverseRipple: 1,
+    extraMove: 0, // Removed since there's no move limit
+    fixedPoint: 1,
+    loopSkip: 1
   });
 
   // Game Configuration based on difficulty
   const difficultyConfig = {
-    easy: { loopSize: 6, moves: 9, lockedCount: 0, powerUpChance: 0.7 },
-    medium: { loopSize: 8, moves: 7, lockedCount: 2, powerUpChance: 0.4 },
-    hard: { loopSize: 10, moves: 6, lockedCount: 3, powerUpChance: 0.2 }
+    easy: { loopSize: 6, lockedCount: 0, powerUpChance: 0.7 },
+    medium: { loopSize: 8, lockedCount: 2, powerUpChance: 0.4 },
+    hard: { loopSize: 10, lockedCount: 3, powerUpChance: 0.2 }
+  };
+
+  // Performance rating thresholds (moves)
+  const performanceRating = {
+    easy: { genius: 8, excellent: 12, good: 18, poor: Infinity },
+    medium: { genius: 12, excellent: 18, good: 25, poor: Infinity },
+    hard: { genius: 15, excellent: 22, good: 32, poor: Infinity }
+  };
+
+  // Get rating based on move count
+  const getRating = (movesCount) => {
+    const thresholds = performanceRating[difficulty];
+    if (movesCount <= thresholds.genius) return 'Genius';
+    if (movesCount <= thresholds.excellent) return 'Excellent';
+    if (movesCount <= thresholds.good) return 'Good';
+    return 'Keep Practicing';
   };
 
   // Generate Random Loop
@@ -46,20 +63,26 @@ const Mobius = () => {
     // Possibly add a powerup
     const newPowerUps = {...powerUps};
     if (Math.random() < config.powerUpChance) {
-      const powerUpTypes = Object.keys(powerUps);
+      const powerUpTypes = Object.keys(powerUps).filter(key => key !== 'extraMove');
       const randomPowerUp = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
       newPowerUps[randomPowerUp] += 1;
       setPowerUps(newPowerUps);
     }
 
     setGameLoop(newLoop);
-    setMovesLeft(config.moves);
+    setMovesTaken(0);
     setLockedIndices(locked);
     setGameState('playing');
+    setShowRules(false);
   }, [difficulty, powerUps]);
 
-  // Start Game
-  const startGame = (level) => {
+  // Initialize game on component mount
+  useEffect(() => {
+    generateLoop();
+  }, [generateLoop]);
+
+  // Change difficulty
+  const changeDifficulty = (level) => {
     setDifficulty(level);
     setSelectedPowerUp(null);
     generateLoop();
@@ -67,7 +90,7 @@ const Mobius = () => {
 
   // Restart Game
   const restartGame = () => {
-    setGameState('setup');
+    generateLoop();
   };
 
   // Check if player has won
@@ -79,7 +102,7 @@ const Mobius = () => {
 
   // Handle making a move
   const makeMove = (index, direction) => {
-    if (gameState !== 'playing' || lockedIndices.includes(index) || movesLeft <= 0) return;
+    if (gameState !== 'playing' || lockedIndices.includes(index)) return;
 
     const newLoop = [...gameLoop];
     const loopSize = newLoop.length;
@@ -171,17 +194,7 @@ const Mobius = () => {
     }
     
     setGameLoop(newLoop);
-    
-    // Handle Extra Move power-up specially
-    if (selectedPowerUp === 'extraMove') {
-      const newPowerUps = {...powerUps};
-      newPowerUps.extraMove -= 1;
-      setPowerUps(newPowerUps);
-      setSelectedPowerUp(null);
-      // Don't decrement moves in this case
-    } else {
-      setMovesLeft(prevMoves => prevMoves - 1);
-    }
+    setMovesTaken(prevMoves => prevMoves + 1);
   };
 
   // Function to activate power-up
@@ -193,14 +206,15 @@ const Mobius = () => {
 
   // Check game state after each move
   useEffect(() => {
-    if (gameState === 'playing') {
-      if (checkWin()) {
-        setGameState('win');
-      } else if (movesLeft <= 0) {
-        setGameState('lose');
-      }
+    if (gameState === 'playing' && checkWin()) {
+      setGameState('win');
     }
-  }, [gameLoop, movesLeft, gameState, checkWin]);
+  }, [gameLoop, gameState, checkWin]);
+
+  // Toggle rules display
+  const toggleRules = () => {
+    setShowRules(!showRules);
+  };
 
   // Render the power-ups
   const renderPowerUps = () => {
@@ -229,16 +243,6 @@ const Mobius = () => {
           </button>
           
           <button 
-            className={`power-up ${selectedPowerUp === 'extraMove' ? 'selected' : ''} ${powerUps.extraMove <= 0 ? 'disabled' : ''}`}
-            onClick={() => activatePowerUp('extraMove')}
-            disabled={powerUps.extraMove <= 0}
-            title="Extra Move: Your next move doesn't count against your move limit"
-          >
-            <span role="img" aria-label="Extra Move">⏳</span>
-            <span className="power-up-count">{powerUps.extraMove}</span>
-          </button>
-          
-          <button 
             className={`power-up ${selectedPowerUp === 'fixedPoint' ? 'selected' : ''} ${powerUps.fixedPoint <= 0 ? 'disabled' : ''}`}
             onClick={() => activatePowerUp('fixedPoint')}
             disabled={powerUps.fixedPoint <= 0}
@@ -264,13 +268,73 @@ const Mobius = () => {
             <p>Active Power-Up: 
               {selectedPowerUp === 'equalizer' && " 🌀 Equalizer - Choose a number to equalize its neighbors"}
               {selectedPowerUp === 'reverseRipple' && " 🔄 Reverse Ripple - Effects propagate in reverse"}
-              {selectedPowerUp === 'extraMove' && " ⏳ Extra Move - Your next move is free"}
               {selectedPowerUp === 'fixedPoint' && " 🎯 Fixed Point - Select a number to lock it"}
               {selectedPowerUp === 'loopSkip' && " 💫 Loop Skip - Your next move won't affect neighbors"}
             </p>
             <button className="cancel-power-up" onClick={() => setSelectedPowerUp(null)}>Cancel</button>
           </div>
         )}
+      </div>
+    );
+  };
+
+  // Render the game information panel
+  const renderGameInfo = () => {
+    return (
+      <div className="mobius-game-info">
+        <div className="difficulty-select">
+          <span>Difficulty:</span>
+          <div className="difficulty-buttons">
+            <button 
+              className={difficulty === 'easy' ? 'active' : ''} 
+              onClick={() => changeDifficulty('easy')}
+            >
+              Easy
+            </button>
+            <button 
+              className={difficulty === 'medium' ? 'active' : ''} 
+              onClick={() => changeDifficulty('medium')}
+            >
+              Medium
+            </button>
+            <button 
+              className={difficulty === 'hard' ? 'active' : ''} 
+              onClick={() => changeDifficulty('hard')}
+            >
+              Hard
+            </button>
+          </div>
+        </div>
+        <div className="moves-counter">Moves: {movesTaken}</div>
+        <button className="rules-button" onClick={toggleRules}>
+          {showRules ? 'Hide Rules' : 'Show Rules'}
+        </button>
+      </div>
+    );
+  };
+
+  // Render the game rules
+  const renderRules = () => {
+    if (!showRules) return null;
+    
+    return (
+      <div className="game-instructions">
+        <h3>How to Play</h3>
+        <p>Make all numbers in the loop equal to win. Use as few moves as possible for a better rating!</p>
+        <ul>
+          <li>Click + or - to change a number</li>
+          <li>When you increase a number, its left neighbor decreases by 1</li>
+          <li>When you decrease a number, its right neighbor increases by 1</li>
+          <li>Locked numbers (🔒) cannot be changed</li>
+          <li>Use power-ups strategically to solve the puzzle efficiently</li>
+        </ul>
+        <h4>Power-Ups:</h4>
+        <ul>
+          <li><span role="img" aria-label="Equalizer">🌀</span> <strong>Equalizer:</strong> Makes neighboring numbers match the selected number</li>
+          <li><span role="img" aria-label="Reverse Ripple">🔄</span> <strong>Reverse Ripple:</strong> Changes propagate in the opposite direction</li>
+          <li><span role="img" aria-label="Fixed Point">🎯</span> <strong>Fixed Point:</strong> Locks a number, making it immune to changes</li>
+          <li><span role="img" aria-label="Loop Skip">💫</span> <strong>Loop Skip:</strong> Your next move won't affect neighbors</li>
+        </ul>
       </div>
     );
   };
@@ -284,11 +348,9 @@ const Mobius = () => {
     
     return (
       <div className="mobius-game-board">
-        <div className="moves-counter">Moves Left: {movesLeft}</div>
-        
         <svg className="loop-container" viewBox="0 0 400 400">
           {/* Outer circle */}
-          <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#ccc" strokeWidth="2" />
+          <circle cx={centerX} cy={centerY} r={radius} fill="none" stroke="#1AFFD5" strokeWidth="2" />
           
           {/* Numbers */}
           {gameLoop.map((num, index) => {
@@ -380,51 +442,29 @@ const Mobius = () => {
     );
   };
 
-  // Render setup screen
-  const renderSetup = () => {
-    return (
-      <div className="mobius-setup">
-        <h2>Choose Difficulty</h2>
-        <div className="difficulty-buttons">
-          <button onClick={() => startGame('easy')}>Easy</button>
-          <button onClick={() => startGame('medium')}>Medium</button>
-          <button onClick={() => startGame('hard')}>Hard</button>
-        </div>
-        
-        <div className="game-instructions">
-          <h3>How to Play</h3>
-          <p>Make all numbers in the loop equal to win.</p>
-          <ul>
-            <li>Click + or - to change a number</li>
-            <li>When you increase a number, its left neighbor decreases by 1</li>
-            <li>When you decrease a number, its right neighbor increases by 1</li>
-            <li>Solve the puzzle before running out of moves</li>
-            <li>Locked numbers (🔒) cannot be changed</li>
-            <li>Use power-ups strategically to solve tougher puzzles</li>
-          </ul>
-        </div>
-      </div>
-    );
-  };
-
   // Render win screen
   const renderWin = () => {
+    const rating = getRating(movesTaken);
+    let ratingClass = '';
+    
+    if (rating === 'Genius') ratingClass = 'genius';
+    else if (rating === 'Excellent') ratingClass = 'excellent';
+    else if (rating === 'Good') ratingClass = 'good';
+    else ratingClass = 'poor';
+    
     return (
       <div className="mobius-result win">
         <h2>You Won! 🎉</h2>
-        <p>You balanced the loop in {difficultyConfig[difficulty].moves - movesLeft} moves.</p>
-        <button onClick={restartGame}>Play Again</button>
-      </div>
-    );
-  };
-
-  // Render lose screen
-  const renderLose = () => {
-    return (
-      <div className="mobius-result lose">
-        <h2>Game Over</h2>
-        <p>You ran out of moves. Try again!</p>
-        <button onClick={restartGame}>Try Again</button>
+        <p>You solved the puzzle in {movesTaken} moves.</p>
+        <div className={`rating ${ratingClass}`}>
+          <span>Rating: {rating}</span>
+        </div>
+        <div className="win-buttons">
+          <button onClick={restartGame}>Play Again</button>
+          <button onClick={() => changeDifficulty(difficulty === 'easy' ? 'medium' : difficulty === 'medium' ? 'hard' : 'easy')}>
+            Try {difficulty === 'easy' ? 'Medium' : difficulty === 'medium' ? 'Hard' : 'Easy'} Level
+          </button>
+        </div>
       </div>
     );
   };
@@ -438,17 +478,16 @@ const Mobius = () => {
       </header>
 
       <div className="mobius-game">
-        {gameState === 'setup' && renderSetup()}
-        
         {gameState === 'playing' && (
           <div className="game-playing">
+            {renderGameInfo()}
+            {renderRules()}
             {renderGameBoard()}
             {renderPowerUps()}
           </div>
         )}
         
         {gameState === 'win' && renderWin()}
-        {gameState === 'lose' && renderLose()}
       </div>
 
       <footer className="mobius-footer">
