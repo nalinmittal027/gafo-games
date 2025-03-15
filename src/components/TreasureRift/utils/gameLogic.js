@@ -4,6 +4,49 @@ export const GRID_SIZE = 8;
 export const MAX_EXPLORATIONS = 10;
 export const MANHATTAN_DISTANCE = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
 
+// Check if a cell is revealed
+export const isRevealed = (x, y, elements, revealedCells) => {
+  // Check if rock or ocean current (always revealed)
+  const { rocks, oceanCurrent } = elements;
+  if (rocks.some(r => r.x === x && r.y === y) || (oceanCurrent.x === x && oceanCurrent.y === y)) {
+    return true;
+  }
+  
+  return revealedCells.some(cell => cell.x === x && cell.y === y);
+};
+
+// Check if a cell is marked
+export const isMarked = (x, y, markedCells) => {
+  return markedCells.some(cell => cell.x === x && cell.y === y);
+};
+
+// Check if a cell is highlighted
+export const isHighlighted = (x, y, highlightedCells) => {
+  return highlightedCells.some(cell => cell.x === x && cell.y === y);
+};
+
+// Check if a cell is in the diagonal line
+export const isInDiagonalLine = (x, y, foundItems, diagonalLine) => {
+  return foundItems.map && foundItems.compass && 
+         diagonalLine.some(cell => cell.x === x && cell.y === y);
+};
+
+// Get arrow direction to map
+export const getArrowToMap = (x, y, elements, foundItems) => {
+  if (foundItems.map) return null;
+  
+  const { map } = elements;
+  const dx = map.x - x;
+  const dy = map.y - y;
+  
+  // Determine direction based on the predominant vector component
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx > 0 ? '➡️' : '⬅️';
+  } else {
+    return dy > 0 ? '⬇️' : '⬆️';
+  }
+};
+
 // Overlay map and compass to find shipwreck
 export const checkMapCompassAlignment = (mapOrientation, compassOrientation, elements, setHighlightedCells, setMessage) => {
   // Check if the orientations align correctly to point to the shipwreck
@@ -68,56 +111,14 @@ export const createDiagonalLine = (elements, setDiagonalLine) => {
   setDiagonalLine(line);
 };
 
-// Check if a cell is revealed
-export const isRevealed = (x, y, elements, revealedCells) => {
-  // Check if rock or ocean current (always revealed)
-  const { rocks, oceanCurrent } = elements;
-  if (rocks.some(r => r.x === x && r.y === y) || (oceanCurrent.x === x && oceanCurrent.y === y)) {
-    return true;
-  }
-  
-  return revealedCells.some(cell => cell.x === x && cell.y === y);
-};
-
-// Check if a cell is marked
-export const isMarked = (x, y, markedCells) => {
-  return markedCells.some(cell => cell.x === x && cell.y === y);
-};
-
-// Check if a cell is highlighted
-export const isHighlighted = (x, y, highlightedCells) => {
-  return highlightedCells.some(cell => cell.x === x && cell.y === y);
-};
-
-// Check if a cell is in the diagonal line
-export const isInDiagonalLine = (x, y, foundItems, diagonalLine) => {
-  return foundItems.map && foundItems.compass && 
-         diagonalLine.some(cell => cell.x === x && cell.y === y);
-};
-
-// Get arrow direction to map
-export const getArrowToMap = (x, y, elements, foundItems) => {
-  if (foundItems.map) return null;
-  
-  const { map } = elements;
-  const dx = map.x - x;
-  const dy = map.y - y;
-  
-  // Determine direction based on the predominant vector component
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return dx > 0 ? '➡️' : '⬅️';
-  } else {
-    return dy > 0 ? '⬇️' : '⬆️';
-  }
-};
-
 // Handle revealing a cell
 export const revealCell = (x, y, board, elements, revealedCells, markedCells, explorationsLeft, score, gamePhase, 
   foundItems, gameStatus, treasureClues, mapClue, setRevealedCells, setMarkedCells, setExplorationsLeft, 
   setScore, setGamePhase, setFoundItems, setGameStatus, setMessage, setBoard, createDiagonalLineFunc) => {
   
+  // Prevent revealing already revealed cells
   if (isRevealed(x, y, elements, revealedCells)) {
-    return;
+    return null;
   }
   
   // Decrement explorations left
@@ -138,8 +139,8 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
   // Check if this cell has something important
   const { map, compass, shipWreck, treasure } = elements;
   
-  // Update the board to show revealed cell
-  const newBoard = [...board];
+  // Create a copy of the board for updates
+  const newBoard = JSON.parse(JSON.stringify(board));
   
   // Make cell visible
   if (newBoard[y][x]) {
@@ -149,14 +150,26 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     newBoard[y][x] = { type: 'empty', visible: true };
   }
   
-  // Update state
+  // Update state first
   setRevealedCells(newRevealedCells);
   setMarkedCells(newMarkedCells);
   setExplorationsLeft(newExplorationsLeft);
   setScore(newScore);
   setBoard(newBoard);
   
-  // Check for special items
+  // Check for game over due to running out of attempts
+  if (newExplorationsLeft <= 0 && gameStatus === 'playing') {
+    setGameStatus('lost');
+    setMessage('You ran out of explorations! The treasure remains hidden.');
+    
+    // Reveal the treasure
+    const finalBoard = JSON.parse(JSON.stringify(newBoard));
+    finalBoard[treasure.y][treasure.x] = { ...finalBoard[treasure.y][treasure.x], visible: true };
+    setBoard(finalBoard);
+    return { newExplorationsLeft, newScore, finalBoard };
+  }
+  
+  // Check for special items - using separate conditionals to avoid complex logic chains
   if (x === map.x && y === map.y) {
     // Found the Map
     setFoundItems(prev => ({ ...prev, map: true }));
@@ -164,8 +177,9 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     setMessage(`You found the Map! ${mapClue}`);
     
     // Create diagonal line to help find compass
-    createDiagonalLineFunc();
-  } else if (x === compass.x && y === compass.y) {
+    if (createDiagonalLineFunc) createDiagonalLineFunc();
+  }
+  else if (x === compass.x && y === compass.y) {
     // Found the Compass
     setFoundItems(prev => ({ ...prev, compass: true }));
     
@@ -176,7 +190,8 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     } else {
       setMessage("You found the Compass! Now find the Map to complete the path.");
     }
-  } else if (x === shipWreck.x && y === shipWreck.y) {
+  }
+  else if (x === shipWreck.x && y === shipWreck.y) {
     // Found the Shipwreck
     setFoundItems(prev => ({ ...prev, shipwreck: true }));
     setGamePhase(4);
@@ -184,7 +199,8 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
     // Format the clues nicely
     const clueList = treasureClues.map((clue, index) => `${index + 1}. ${clue}`).join('\n');
     setMessage(`You found the Shipwreck and a Scroll! The Scroll contains these clues to find the treasure:\n${clueList}`);
-  } else if (x === treasure.x && y === treasure.y) {
+  }
+  else if (x === treasure.x && y === treasure.y) {
     // Found the Treasure
     if (gamePhase === 4 && foundItems.shipwreck) {
       // Win condition
@@ -196,22 +212,12 @@ export const revealCell = (x, y, board, elements, revealedCells, markedCells, ex
       // Found treasure too early
       setMessage("You found something shiny, but without the Shipwreck's Scroll, you don't recognize its value. Keep exploring!");
     }
-  } else {
+  }
+  else {
     // Empty cell, just show arrow pointing to map if in phase 1
     if (gamePhase === 1 && !foundItems.map) {
       setMessage(`No clues here. The directional arrow might help guide your search.`);
     }
-  }
-  
-      // Check if we ran out of explorations
-  if (newExplorationsLeft <= 0 && gameStatus === 'playing') {
-    setGameStatus('lost');
-    setMessage('You ran out of explorations! The treasure remains hidden.');
-    
-    // Reveal the treasure
-    const finalBoard = [...newBoard];
-    finalBoard[treasure.y][treasure.x] = { ...finalBoard[treasure.y][treasure.x], visible: true };
-    setBoard(finalBoard);
   }
   
   return { newExplorationsLeft, newScore, newBoard };

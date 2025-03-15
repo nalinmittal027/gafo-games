@@ -144,68 +144,18 @@ export const createInitialBoard = (deepOceanTiles, obstacles) => {
   return newBoard;
 };
 
-// Place map, compass, shipwreck and treasure
-export const placeGameElements = (board, obstacles, deepOceanTiles, clueGenerator) => {
-  // Find valid tiles for map (any blue tile)
-  const validMapTiles = [];
-  for (let y = 0; y < GRID_SIZE; y++) {
-    for (let x = 0; x < GRID_SIZE; x++) {
-      if (
-        (board[y][x].type === 'deepOcean' || board[y][x].type === 'shallowOcean') &&
-        !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
-        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
-      ) {
-        validMapTiles.push({ x, y });
-      }
-    }
-  }
-  
-  // Place map
-  const mapIndex = Math.floor(Math.random() * validMapTiles.length);
-  const map = validMapTiles[mapIndex];
-  board[map.y][map.x] = { type: 'map', visible: false };
-  
-  // Generate compass location based on clues
-  const compass = generateCompassLocation(board, obstacles, deepOceanTiles);
-  board[compass.y][compass.x] = { type: 'compass', visible: false };
-  
-  // Generate shipwreck location based on map and compass orientation
-  const shipWreck = generateShipwreckLocation(map, compass);
-  board[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: false };
-  
-  // Generate treasure location based on various clues
-  const treasure = generateTreasureLocation(
-    board, map, compass, shipWreck, obstacles, deepOceanTiles
-  );
-  board[treasure.y][treasure.x] = { type: 'treasure', visible: false };
-  
-  // Generate clues
-  const compassClue = clueGenerator.generateCompassClue(compass, obstacles, deepOceanTiles);
-  const treasureClues = clueGenerator.generateTreasureClues(
-    treasure, map, compass, shipWreck, obstacles, deepOceanTiles, board
-  );
-  
-  return { 
-    map, 
-    compass, 
-    shipWreck, 
-    treasure,
-    compassClue,
-    treasureClues
-  };
-};
-
 // Generate a valid compass location
 export const generateCompassLocation = (board, obstacles, deepOceanTiles) => {
   // Prefer deep ocean tiles
   const deepOceanTilesList = [];
+  
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (
         board[y][x].type === 'deepOcean' &&
         !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
         !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y) &&
-        !(board[y][x].type === 'map')
+        board[y][x].type !== 'map'
       ) {
         deepOceanTilesList.push({ x, y });
       }
@@ -234,7 +184,7 @@ export const generateCompassLocation = (board, obstacles, deepOceanTiles) => {
       if (
         !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
         !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y) &&
-        !(board[y][x].type === 'map')
+        board[y][x].type !== 'map'
       ) {
         validTiles.push({ x, y });
       }
@@ -304,26 +254,26 @@ export const generateTreasureLocation = (board, map, compass, shipWreck, obstacl
   });
   
   // Filter 3: Directional clue (e.g., East of the Shipwreck)
-  validTiles = validTiles.filter(tile => 
-    tile.x > shipWreck.x
-  );
+  const eastTiles = validTiles.filter(tile => tile.x > shipWreck.x);
+  if (eastTiles.length > 0) {
+    validTiles = eastTiles;
+  }
   
   // If we still have multiple options, apply more filters:
-  
-  // Filter 4: Number-based clue (e.g., sum of row and column is odd)
   if (validTiles.length > 1) {
-    validTiles = validTiles.filter(tile => 
-      (tile.x + 1 + tile.y + 1) % 2 === 1
-    );
+    // Filter 4: Number-based clue (e.g., sum of row and column is odd)
+    const oddSumTiles = validTiles.filter(tile => (tile.x + 1 + tile.y + 1) % 2 === 1);
+    if (oddSumTiles.length > 0) {
+      validTiles = oddSumTiles;
+    }
   }
   
-  // If we narrowed down to at least one tile, use it
+  // If we narrowed down to at least one tile, use the first one
   if (validTiles.length > 0) {
-    return validTiles[Math.floor(Math.random() * validTiles.length)];
+    return validTiles[0];
   }
   
-  // Fallback: If no valid tile with all constraints, relax constraints and try again
-  validTiles = [];
+  // Fallback: If no valid tile with all constraints, relax constraints and just use a valid tile
   for (let y = 0; y < GRID_SIZE; y++) {
     for (let x = 0; x < GRID_SIZE; x++) {
       if (
@@ -333,10 +283,82 @@ export const generateTreasureLocation = (board, map, compass, shipWreck, obstacl
         !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
         !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
       ) {
-        validTiles.push({ x, y });
+        return { x, y };
       }
     }
   }
   
-  return validTiles[Math.floor(Math.random() * validTiles.length)];
+  // Last resort - just return a position that's not a rock or current
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (
+        !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
+        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
+      ) {
+        return { x, y };
+      }
+    }
+  }
+  
+  // If we somehow got here, just return a position
+  return { x: 0, y: 0 };
+};
+
+// Place map, compass, shipwreck and treasure
+export const placeGameElements = (board, obstacles, deepOceanTiles, clueGenerator) => {
+  // Find valid tiles for map (any blue tile)
+  const validMapTiles = [];
+  for (let y = 0; y < GRID_SIZE; y++) {
+    for (let x = 0; x < GRID_SIZE; x++) {
+      if (
+        (board[y][x].type === 'deepOcean' || board[y][x].type === 'shallowOcean') &&
+        !obstacles.rocks.some(rock => rock.x === x && rock.y === y) &&
+        !(obstacles.oceanCurrent.x === x && obstacles.oceanCurrent.y === y)
+      ) {
+        validMapTiles.push({ x, y });
+      }
+    }
+  }
+  
+  // Place map
+  const mapIndex = Math.floor(Math.random() * validMapTiles.length);
+  const map = validMapTiles[mapIndex];
+  if (map && board[map.y] && board[map.y][map.x]) {
+    board[map.y][map.x] = { type: 'map', visible: false };
+  }
+  
+  // Generate compass location based on clues
+  const compass = generateCompassLocation(board, obstacles, deepOceanTiles);
+  if (compass && board[compass.y] && board[compass.y][compass.x]) {
+    board[compass.y][compass.x] = { type: 'compass', visible: false };
+  }
+  
+  // Generate shipwreck location based on map and compass orientation
+  const shipWreck = generateShipwreckLocation(map, compass);
+  if (shipWreck && board[shipWreck.y] && board[shipWreck.y][shipWreck.x]) {
+    board[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: false };
+  }
+  
+  // Generate treasure location based on various clues
+  const treasure = generateTreasureLocation(
+    board, map, compass, shipWreck, obstacles, deepOceanTiles
+  );
+  if (treasure && board[treasure.y] && board[treasure.y][treasure.x]) {
+    board[treasure.y][treasure.x] = { type: 'treasure', visible: false };
+  }
+  
+  // Generate clues
+  const compassClue = clueGenerator.generateCompassClue(compass, obstacles, deepOceanTiles);
+  const treasureClues = clueGenerator.generateTreasureClues(
+    treasure, map, compass, shipWreck, obstacles, deepOceanTiles, board
+  );
+  
+  return { 
+    map, 
+    compass, 
+    shipWreck, 
+    treasure,
+    compassClue,
+    treasureClues
+  };
 };

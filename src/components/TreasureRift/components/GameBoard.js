@@ -1,5 +1,5 @@
 // src/components/TreasureRift/components/GameBoard.js
-import React from 'react';
+import React, { memo } from 'react';
 import { 
   isRevealed, 
   isMarked, 
@@ -8,20 +8,13 @@ import {
   getArrowToMap 
 } from '../utils/gameLogic';
 
-const GameBoard = ({ 
-  board, 
-  gamePhase, 
-  foundItems, 
-  elements, 
-  revealedCells, 
-  markedCells, 
-  highlightedCells, 
-  diagonalLine, 
-  handleCellClick, 
-  handleCellLongPress 
+// Cell component to optimize rendering
+const Cell = memo(({ 
+  x, y, board, gamePhase, foundItems, elements, 
+  revealedCells, markedCells, highlightedCells, diagonalLine,
+  handleCellClick, handleCellLongPress
 }) => {
-  
-  const getCellClassName = (x, y) => {
+  const getCellClassName = () => {
     const cell = board[y] && board[y][x];
     const revealed = isRevealed(x, y, elements, revealedCells);
     const marked = isMarked(x, y, markedCells);
@@ -51,7 +44,7 @@ const GameBoard = ({
     return classNames;
   };
 
-  const getCellContent = (x, y) => {
+  const getCellContent = () => {
     const cell = board[y] && board[y][x];
     const revealed = isRevealed(x, y, elements, revealedCells);
     const marked = isMarked(x, y, markedCells);
@@ -95,6 +88,50 @@ const GameBoard = ({
   };
 
   return (
+    <div
+      className={getCellClassName()}
+      onClick={() => handleCellClick(x, y)}
+      onContextMenu={(e) => handleCellLongPress(x, y, e)}
+      onTouchStart={(e) => {
+        const longPressTimer = setTimeout(() => {
+          handleCellLongPress(x, y, e);
+        }, 500);
+        e.target.longPressTimer = longPressTimer;
+      }}
+      onTouchEnd={(e) => {
+        if (e.target.longPressTimer) {
+          clearTimeout(e.target.longPressTimer);
+        }
+      }}
+      onTouchMove={(e) => {
+        if (e.target.longPressTimer) {
+          clearTimeout(e.target.longPressTimer);
+        }
+      }}
+    >
+      {getCellContent()}
+    </div>
+  );
+});
+
+const GameBoard = ({ 
+  board, 
+  gamePhase, 
+  foundItems, 
+  elements, 
+  revealedCells, 
+  markedCells, 
+  highlightedCells, 
+  diagonalLine, 
+  handleCellClick, 
+  handleCellLongPress 
+}) => {
+  // Prevent rendering if board is empty or not initialized
+  if (!board || board.length === 0) {
+    return <div className="game-board-container">Loading game board...</div>;
+  }
+
+  return (
     <div className="game-board-container">
       <div className="game-board">
         {/* Row numbers */}
@@ -111,30 +148,21 @@ const GameBoard = ({
             <div className="cell-label">{y + 1}</div>
             
             {row.map((_, x) => (
-              <div
+              <Cell
                 key={`${x}-${y}`}
-                className={getCellClassName(x, y)}
-                onClick={() => handleCellClick(x, y)}
-                onContextMenu={(e) => handleCellLongPress(x, y, e)}
-                onTouchStart={(e) => {
-                  const longPressTimer = setTimeout(() => {
-                    handleCellLongPress(x, y, e);
-                  }, 500);
-                  e.target.longPressTimer = longPressTimer;
-                }}
-                onTouchEnd={(e) => {
-                  if (e.target.longPressTimer) {
-                    clearTimeout(e.target.longPressTimer);
-                  }
-                }}
-                onTouchMove={(e) => {
-                  if (e.target.longPressTimer) {
-                    clearTimeout(e.target.longPressTimer);
-                  }
-                }}
-              >
-                {getCellContent(x, y)}
-              </div>
+                x={x}
+                y={y}
+                board={board}
+                gamePhase={gamePhase}
+                foundItems={foundItems}
+                elements={elements}
+                revealedCells={revealedCells}
+                markedCells={markedCells}
+                highlightedCells={highlightedCells}
+                diagonalLine={diagonalLine}
+                handleCellClick={handleCellClick}
+                handleCellLongPress={handleCellLongPress}
+              />
             ))}
           </div>
         ))}
