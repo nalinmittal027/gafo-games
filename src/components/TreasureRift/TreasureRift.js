@@ -189,15 +189,15 @@ const TreasureRift = () => {
       treasure
     });
 
-    // Create a new board with placed elements (all hidden initially)
+    // Create a new board with placed elements (rocks and ocean current are pre-revealed)
     const newBoard = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
 
-    // Place elements on the board (all hidden initially)
+    // Place elements on the board
     rocks.forEach(rock => {
-      newBoard[rock.y][rock.x] = { type: 'rock', visible: false };
+      newBoard[rock.y][rock.x] = { type: 'rock', visible: true };
     });
 
-    newBoard[oceanCurrent.y][oceanCurrent.x] = { type: 'oceanCurrent', visible: false };
+    newBoard[oceanCurrent.y][oceanCurrent.x] = { type: 'oceanCurrent', visible: true };
     newBoard[map.y][map.x] = { type: 'map', visible: false };
     newBoard[shipWreck.y][shipWreck.x] = { type: 'shipWreck', visible: false };
 
@@ -371,9 +371,6 @@ const TreasureRift = () => {
     <div className="treasure-rift-container">
       <div className="game-header">
         <h1>Treasure Rift</h1>
-        <div className="compass-display">
-          {elements.compass.orientation === 'horizontal' ? '⬅️ ➡️' : '⬆️ ⬇️'}
-        </div>
         <div className="game-stats">
           <div className="stat-item">
             <span className="stat-label">Explorations</span>
@@ -433,8 +430,12 @@ const TreasureRift = () => {
             <span className="legend-text">Map - Indicates treasure is within three adjacent rows or columns</span>
           </div>
           <div className="legend-item">
-            <span className="legend-icon compass-icons">⬅️ ➡️ / ⬆️ ⬇️</span>
-            <span className="legend-text">Compass - Shows if treasure is in horizontal rows or vertical columns</span>
+            <span className="legend-icon compass-icons">⬅️ ➡️</span>
+            <span className="legend-text">Horizontal Arrows - Treasure is in one of the three rows (current, above, or below the map)</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-icon compass-icons">⬆️ ⬇️</span>
+            <span className="legend-text">Vertical Arrows - Treasure is in one of the three columns (current, left, or right of the map)</span>
           </div>
           <div className="legend-item">
             <span className="legend-icon">⚓</span>

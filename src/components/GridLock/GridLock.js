@@ -438,15 +438,9 @@ const GridLock = () => {
         }
         break;
       default:
-        // For letter inputs, after setting the letter, move to next cell to the right
-        nextCol++;
-        while (nextCol < 7 && (!grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol])) {
-          nextCol++;
-        }
-        // If we went out of bounds or hit a revealed/invalid cell, stay where we are
-        if (nextCol >= 7 || !grid[rowIndex][nextCol] || grid[rowIndex][nextCol].revealed || !originalGrid[rowIndex][nextCol]) {
-          nextCol = colIndex;
-        }
+        // For letter inputs, stay in the same cell (this fixes bug #1)
+        nextRow = rowIndex;
+        nextCol = colIndex;
         break;
     }
     
@@ -484,6 +478,31 @@ const GridLock = () => {
     }
     
     setInvalidLetter('');
+  };
+  
+  // Handle keyboard navigation and input
+  const handleKeyDown = (event, rowIndex, colIndex) => {
+    if (gameWon || solutionRevealed) return;
+    
+    const { key } = event;
+    
+    // If it's an arrow key, prevent default behavior and move focus
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
+      event.preventDefault();
+      moveFocus(rowIndex, colIndex, key);
+    } 
+    // For letter inputs, don't automatically move (fix for bug #1)
+    else if (/^[a-zA-Z]$/.test(key) && key.length === 1) {
+      // Let the input handle it but don't move focus
+    }
+    // For backspace, handle special delete and move logic
+    else if (key === 'Backspace') {
+      // If the cell is already empty, move to previous cell
+      if (!grid[rowIndex][colIndex].letter) {
+        event.preventDefault();
+        moveFocus(rowIndex, colIndex, 'Backspace');
+      }
+    }
   };
   
   // Handle difficulty change
@@ -524,6 +543,28 @@ const GridLock = () => {
     }
   };
   
+  // Reveal the solution
+  const revealSolution = () => {
+    // Use the existing grid structure but fill in all the letters from originalGrid
+    const solutionGrid = grid.map((row, i) => {
+      return row.map((cell, j) => {
+        if (!cell) return null; // Keep null cells as null
+        
+        // If cell exists in the grid, just fill in the correct letter from originalGrid
+        if (originalGrid[i] && originalGrid[i][j]) {
+          return {
+            ...cell, // Keep all other properties
+            letter: originalGrid[i][j] // Update the letter from solution
+          };
+        }
+        return cell; // Keep as is if there's no matching letter in originalGrid
+      });
+    });
+    
+    setGrid(solutionGrid);
+    setSolutionRevealed(true);
+  };
+  
   // Initialize game
   useEffect(() => {
     generateNewGame(difficulty);
@@ -554,8 +595,10 @@ const GridLock = () => {
     if (allRowsMatch && allColsMatch && allCellsFilled && !solutionRevealed) {
       setGameWon(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, originalGrid, solutionRevealed]);
+
+  // Get maximum columns in the grid
+  const maxColumns = Math.max(...(originalGrid.map(row => row.filter(cell => cell).length) || [0]));
 
   return (
     <div className="grid-lock-container">
@@ -605,7 +648,7 @@ const GridLock = () => {
       )}
       
       <div className="game-area">
-        <div className="letter-values-container">
+        <div className="game-panel">
           <div className="letter-values">
             <h3>LETTER VALUES</h3>
             <div className="letter-values-grid">
@@ -696,9 +739,11 @@ const GridLock = () => {
               ))}
             </div>
           </div>
+          
+          {/* Moved remaining letters counter here (below grid) - Fix for bug #2 */}
           <div className="remaining-letters">
-            <span className="remaining-label">REMAINING:</span>
-            <span className="remaining-count">{remainingLetters}</span>
+            <h3>REMAINING</h3>
+            <div className="remaining-count">{remainingLetters}</div>
           </div>
         </div>
       </div>
@@ -724,6 +769,7 @@ const GridLock = () => {
         <ul>
           <li>Complete the grid with letters to form valid words in each row</li>
           <li>The first column letter is already provided for each row</li>
+          <li>Each row starts with the letter in the first column</li>
           <li>The sum of each row and column must match the numbers shown</li>
           <li>Each letter has a numerical value (0-4) shown in the table</li>
           <li>3 letters are revealed to help you get started</li>

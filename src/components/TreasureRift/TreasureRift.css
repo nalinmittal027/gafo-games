@@ -50,17 +50,7 @@ body {
   font-weight: 800;
 }
 
-.compass-display {
-  font-size: 2rem;
-  background-color: var(--accent-color);
-  color: white;
-  padding: 10px 15px;
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+/* Removed the compass display that was showing at the top of the page */
 
 .game-stats {
   display: flex;
@@ -116,27 +106,27 @@ body {
 .game-board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  gap: 8px;
-  max-width: 500px;
+  gap: 6px;
+  max-width: 450px;
   background-color: rgba(255, 255, 255, 0.5);
-  padding: 20px;
+  padding: 15px;
   border-radius: 15px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 .board-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cell {
-  width: 50px;
-  height: 50px;
+  width: 45px;
+  height: 45px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 28px;
-  border-radius: 10px;
+  font-size: 24px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
@@ -528,7 +518,7 @@ body {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .treasure-rift-container {
-    padding: 15px;
+    padding: 12px;
   }
   
   .game-header {
@@ -542,19 +532,23 @@ body {
     justify-content: space-between;
   }
   
-  .compass-display {
-    align-self: center;
-    margin: 10px 0;
+  .game-board-container {
+    overflow-x: hidden;
+    max-width: 100%;
   }
   
   .game-board {
-    gap: 5px;
+    gap: 4px;
+    padding: 10px;
+    max-width: 95%;
+    margin: 0 auto;
   }
   
   .cell {
-    width: 40px;
-    height: 40px;
-    font-size: 22px;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    border-radius: 6px;
   }
   
   .legend-items {
@@ -564,5 +558,28 @@ body {
   .game-over-buttons {
     flex-direction: column;
     gap: 10px;
+  }
+
+  .game-message {
+    padding: 12px 15px;
+    font-size: 1rem;
+  }
+
+  .game-legend {
+    padding: 15px;
+  }
+
+  .legend-item {
+    gap: 10px;
+  }
+
+  .legend-icon {
+    font-size: 22px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .legend-text {
+    font-size: 0.85rem;
   }
 }
