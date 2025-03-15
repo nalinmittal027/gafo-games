@@ -88,11 +88,14 @@ const TreasureRift = () => {
         y: Math.floor(Math.random() * GRID_SIZE)
       };
 
-      // Ensure rocks don't overlap with shipwreck
-      if (!(rock.x === shipWreck.x && rock.y === shipWreck.y) && 
-          !rocks.some(r => r.x === rock.x && r.y === rock.y)) {
-        rocks.push(rock);
+      // Ensure rocks don't overlap with shipwreck or compass
+      if ((rock.x === shipWreck.x && rock.y === shipWreck.y) || 
+          (rock.x === compass.x && rock.y === compass.y) ||
+          rocks.some(r => r.x === rock.x && r.y === rock.y)) {
+        continue;
       }
+
+      rocks.push(rock);
     }
 
     // Step 4: Place the ocean current
@@ -166,7 +169,8 @@ const TreasureRift = () => {
         if ((x === shipWreck.x && y === shipWreck.y) ||
             rocks.some(r => r.x === x && r.y === r.y) ||
             (x === oceanCurrent.x && y === oceanCurrent.y) ||
-            (x === map.x && y === map.y)) {
+            (x === map.x && y === map.y) ||
+            (x === compass.x && y === compass.y)) {
           continue;
         }
 
@@ -225,7 +229,8 @@ const TreasureRift = () => {
           // Skip if this position overlaps with other elements
           if ((newX === shipWreck.x && newY === shipWreck.y) ||
               rocks.some(r => r.x === newX && r.y === newY) ||
-              (newX === map.x && newY === map.y)) {
+              (newX === map.x && newY === map.y) ||
+              (newX === compass.x && newY === compass.y)) {
             continue;
           }
           
@@ -282,6 +287,7 @@ const TreasureRift = () => {
           rocks.some(r => r.x === pirate.x && r.y === pirate.y) ||
           (pirate.x === oceanCurrent.x && pirate.y === oceanCurrent.y) ||
           (pirate.x === map.x && pirate.y === map.y) ||
+          (pirate.x === compass.x && pirate.y === compass.y) ||
           (pirate.x === treasure.x && pirate.y === treasure.y) ||
           pirates.some(p => p.x === pirate.x && p.y === pirate.y)) {
         continue;
@@ -322,6 +328,150 @@ const TreasureRift = () => {
     newBoard[treasure.y][treasure.x] = { type: 'treasure', visible: false };
 
     setBoard(newBoard);
+  };
+
+  const createDiagonalLine = () => {
+    const { map, compass } = elements;
+    const dx = compass.x - map.x;
+    const dy = compass.y - map.y;
+    
+    const line = [];
+    
+    // Create a line from map to compass (including both)
+    const steps = Math.max(Math.abs(dx), Math.abs(dy));
+    for (let i = 0; i <= steps; i++) {
+      const ratio = steps === 0 ? 0 : i / steps;
+      const x = Math.round(map.x + dx * ratio);
+      const y = Math.round(map.y + dy * ratio);
+      line.push({ x, y });
+    }
+    
+    setDiagonalLine(line);
+  };
+  
+  const calculateShipwreckHighlights = () => {
+    const { shipWreck, oceanCurrent, map, compass, rocks } = elements;
+    const validCells = [];
+    
+    const range = 3; // Manhattan distance from shipwreck
+    
+    for (let y = Math.max(0, shipWreck.y - range); y <= Math.min(GRID_SIZE - 1, shipWreck.y + range); y++) {
+      for (let x = Math.max(0, shipWreck.x - range); x <= Math.min(GRID_SIZE - 1, shipWreck.x + range); x++) {
+        // Skip the shipwreck itself
+        if (x === shipWreck.x && y === shipWreck.y) continue;
+        
+        // Check if within range
+        if (MANHATTAN_DISTANCE(x, y, shipWreck.x, shipWreck.y) <= range) {
+          // Check if not near rocks
+          const isNearRock = rocks.some(rock => {
+            const dx = Math.abs(x - rock.x);
+            const dy = Math.abs(y - rock.y);
+            return dx <= 1 && dy <= 1; // This includes diagonals
+          });
+          
+          // Check if not in ocean current row/column
+          const isInOceanPath = x === oceanCurrent.x || y === oceanCurrent.y;
+          
+          if (!isNearRock && !isInOceanPath) {
+            validCells.push({ x, y });
+          }
+        }
+      }
+    }
+    
+    setHighlightedCells(validCells);
+  };
+
+  const isRevealed = (x, y) => {
+    // Rocks and ocean current are always considered revealed
+    const cell = board[y] && board[y][x];
+    if (cell && (cell.type === 'rock' || cell.type === 'oceanCurrent')) {
+      return true;
+    }
+    return revealedCells.some(cell => cell.x === x && cell.y === y);
+  };
+  
+  const isMarked = (x, y) => {
+    return markedCells.some(cell => cell.x === x && cell.y === y);
+  };
+  
+  const isHighlighted = (x, y) => {
+    return highlightedCells.some(cell => cell.x === x && cell.y === y);
+  };
+  
+  const isInDiagonalLine = (x, y) => {
+    return diagonalLine.some(cell => cell.x === x && cell.y === y);
+  };
+  
+  const getArrowToMap = (x, y) => {
+    if (gamePhase !== 1 || foundMap) return null;
+    
+    const { map } = elements;
+    const dx = map.x - x;
+    const dy = map.y - y;
+    
+    // Determine direction based on the predominant vector component
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0 ? '➡️' : '⬅️';
+    } else {
+      return dy > 0 ? '⬇️' : '⬆️';
+    }
+  };
+
+  const handleCellClick = (x, y) => {
+    if (gameStatus !== 'playing') {
+      return;
+    }
+    
+    // Handle double click (reveal)
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      setClickTimeout(null);
+      
+      // Double click - reveal the cell if not already revealed
+      if (!isRevealed(x, y)) {
+        revealCell(x, y);
+      }
+      return;
+    }
+    
+    // Single click - set timeout to detect if it's a single or double click
+    const timeout = setTimeout(() => {
+      // Single click - toggle mark
+      if (!isRevealed(x, y)) {
+        toggleMark(x, y);
+      }
+      setClickTimeout(null);
+    }, 300); // 300ms delay to detect double click
+    
+    setClickTimeout(timeout);
+  };
+  
+  const handleCellLongPress = (x, y, e) => {
+    e.preventDefault(); // Prevent context menu on right click
+    
+    if (gameStatus !== 'playing') {
+      return;
+    }
+    
+    // If the cell is marked, remove the mark
+    if (isMarked(x, y)) {
+      const newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
+      setMarkedCells(newMarkedCells);
+    }
+    
+    setIsLongPress(true);
+  };
+  
+  const toggleMark = (x, y) => {
+    if (isMarked(x, y)) {
+      // Remove mark
+      const newMarkedCells = markedCells.filter(cell => !(cell.x === x && cell.y === y));
+      setMarkedCells(newMarkedCells);
+    } else {
+      // Add mark
+      setMarkedCells([...markedCells, { x, y }]);
+    }
   };
 
   const revealCell = (x, y) => {
@@ -438,65 +588,6 @@ const TreasureRift = () => {
       finalBoard[elements.treasure.y][elements.treasure.x] = { type: 'treasure', visible: true };
       setBoard(finalBoard);
     }
-  };
-      finalBoard[elements.treasure.y][elements.treasure.x] = { type: 'treasure', visible: true };
-      setBoard(finalBoard);
-    };
-
-  const createDiagonalLine = () => {
-    const { map, compass } = elements;
-    const dx = compass.x - map.x;
-    const dy = compass.y - map.y;
-    
-    const line = [];
-    
-    // Create a line from map to compass (including both)
-    const steps = Math.max(Math.abs(dx), Math.abs(dy));
-    for (let i = 0; i <= steps; i++) {
-      const ratio = steps === 0 ? 0 : i / steps;
-      const x = Math.round(map.x + dx * ratio);
-      const y = Math.round(map.y + dy * ratio);
-      line.push({ x, y });
-    }
-    
-    setDiagonalLine(line);
-  };
-  
-  const calculateShipwreckHighlights = () => {
-    const { shipWreck, oceanCurrent, map, compass, rocks } = elements;
-    const validCells = [];
-    
-    const range = 3; // Manhattan distance from shipwreck
-    
-    for (let y = Math.max(0, shipWreck.y - range); y <= Math.min(GRID_SIZE - 1, shipWreck.y + range); y++) {
-      for (let x = Math.max(0, shipWreck.x - range); x <= Math.min(GRID_SIZE - 1, shipWreck.x + range); x++) {
-        // Skip the shipwreck itself
-        if (x === shipWreck.x && y === shipWreck.y) continue;
-        
-        // Check if within range
-        if (MANHATTAN_DISTANCE(x, y, shipWreck.x, shipWreck.y) <= range) {
-          // Check if not near rocks
-          const isNearRock = rocks.some(rock => {
-            const dx = Math.abs(x - rock.x);
-            const dy = Math.abs(y - rock.y);
-            return dx <= 1 && dy <= 1; // This includes diagonals
-          });
-          
-          // Check if not in ocean current row/column
-          const isInOceanPath = x === oceanCurrent.x || y === oceanCurrent.y;
-          
-          if (!isNearRock && !isInOceanPath) {
-            validCells.push({ x, y });
-          }
-        }
-      }
-    }
-    
-    setHighlightedCells(validCells);
-  };
-  
-  const isMarked = (x, y) => {
-    return markedCells.some(cell => cell.x === x && cell.y === y);
   };
 
   const getCellClassName = (x, y) => {
@@ -697,6 +788,7 @@ const TreasureRift = () => {
         </div>
       )}
     </div>
-  );;
+  );
+};
 
 export default TreasureRift;
