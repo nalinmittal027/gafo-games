@@ -539,6 +539,12 @@ const GridLock = () => {
     // Only increment attempts for new inputs, not deletions
     if (inputLetter) {
       setAttempts(prev => prev + 1);
+      
+      // Only move to next cell if a letter was entered (not when deleting)
+      // Delay the move just slightly to ensure the input is processed first
+      setTimeout(() => {
+        moveFocus(rowIndex, colIndex, 'letter');
+      }, 50);
     }
     
     setInvalidLetter('');
@@ -555,14 +561,7 @@ const GridLock = () => {
       event.preventDefault();
       moveFocus(rowIndex, colIndex, key);
     } 
-    // For letter inputs, move to next cell after handling input
-    else if (/^[a-zA-Z]$/.test(key) && key.length === 1) {
-      // The input change will be handled separately
-      // After the input is handled, we'll move focus to the next cell
-      setTimeout(() => {
-        moveFocus(rowIndex, colIndex, 'letter');
-      }, 10);
-    }
+    // We don't need to handle letter inputs here as the movement is now handled in handleCellChange
     // For backspace, handle special delete and move logic
     else if (key === 'Backspace') {
       // If the cell is already empty, move to previous cell
